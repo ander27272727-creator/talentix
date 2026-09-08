@@ -45,14 +45,14 @@ export default function LoginPage() {
   const demoLogins = [
     {
       role: "Candidato",
-      email: "candidato@talentix.com",
+      email: "maria.garcia@email.com",
       icon: Users,
       color: "text-blue-600",
       bg: "bg-blue-50",
     },
     {
       role: "Empresa",
-      email: "empresa@talentix.com",
+      email: "rrhh@techcorp.com",
       icon: Building2,
       color: "text-purple-600",
       bg: "bg-purple-50",

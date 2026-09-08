@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import {
   User, Save, Plus, Trash2, Edit2, MapPin, Mail, Phone,
   Linkedin, Globe, GraduationCap, Briefcase, Star, X, Laptop,
@@ -14,52 +14,88 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Separator } from "@/components/ui/separator"
 import { Progress } from "@/components/ui/progress"
+import { useStore } from "@/store/useStore"
+import { Loader2 } from "lucide-react"
 
 export default function CandidateProfilePage() {
+  const { user } = useStore()
+  const [loading, setLoading] = useState(true)
   const [isEditing, setIsEditing] = useState(false)
   const [profile, setProfile] = useState({
-    name: "María García",
-    email: "maria@example.com",
-    phone: "+34 612 345 678",
-    location: "Madrid, España",
-    country: "España",
-    age: 28,
-    bio: "Ingeniera de software con 5 años de experiencia en desarrollo full stack. Apasionada por crear productos que impacten positivamente a los usuarios.",
-    linkedIn: "linkedin.com/in/mariagarcia",
-    portfolio: "mariagarcia.dev",
-    // Work preferences
-    workPreference: "REMOTE" as "REMOTE" | "HYBRID" | "ONSITE" | "ANY",
-    preferredCountries: ["España", "México", "Colombia", "Estados Unidos"],
-    openToRelocation: true,
-    skills: ["React", "TypeScript", "Node.js", "Python", "PostgreSQL", "AWS", "Docker", "GraphQL"],
-    education: [
-      {
-        institution: "Universidad Politécnica de Madrid",
-        degree: "Grado en Ingeniería Informática",
-        field: "Ingeniería del Software",
-        startDate: "2015",
-        endDate: "2019",
-      },
-    ],
-    experience: [
-      {
-        company: "TechCorp Solutions",
-        position: "Senior Full Stack Developer",
-        description: "Desarrollo de aplicaciones web escalables usando React y Node.js. Liderazgo técnico de equipo de 5 desarrolladores.",
-        startDate: "2022",
-        endDate: "Presente",
-        skills: ["React", "Node.js", "TypeScript", "AWS"],
-      },
-      {
-        company: "StartupXYZ",
-        position: "Full Stack Developer",
-        description: "Desarrollo de MVP desde cero. Implementación de arquitectura de microservicios.",
-        startDate: "2019",
-        endDate: "2022",
-        skills: ["React", "Python", "PostgreSQL", "Docker"],
-      },
-    ],
+    name: "",
+    email: "",
+    phone: "",
+    location: "",
+    country: "",
+    bio: "",
+    linkedIn: "",
+    portfolio: "",
+    workPreference: "ANY" as "REMOTE" | "HYBRID" | "ONSITE" | "ANY",
+    preferredCountries: [] as string[],
+    openToRelocation: false,
+    skills: [] as string[],
+    education: [] as { institution: string; degree: string; field: string; startDate: string; endDate: string }[],
+    experience: [] as { company: string; position: string; description: string; startDate: string; endDate: string; skills: string[] }[],
   })
+
+  useEffect(() => {
+    if (!user?.id) return
+    fetch(`/api/candidate/profile?userId=${user.id}`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.success && data.profile) {
+          const p = data.profile
+          setProfile({
+            name: p.user?.name || "",
+            email: p.user?.email || "",
+            phone: p.phone || "",
+            location: p.location || "",
+            country: "",
+            bio: p.bio || "",
+            linkedIn: p.linkedInUrl || "",
+            portfolio: p.portfolioUrl || "",
+            workPreference: "ANY",
+            preferredCountries: [],
+            openToRelocation: false,
+            skills: p.skills || [],
+            education: (p.education || []).map((e: Record<string, unknown>) => ({
+              institution: e.institution as string,
+              degree: e.degree as string,
+              field: e.field as string,
+              startDate: e.startDate ? new Date(e.startDate as string).getFullYear().toString() : "",
+              endDate: e.endDate ? new Date(e.endDate as string).getFullYear().toString() : "",
+            })),
+            experience: (p.experience || []).map((e: Record<string, unknown>) => ({
+              company: e.company as string,
+              position: e.position as string,
+              description: e.description as string,
+              startDate: e.startDate ? new Date(e.startDate as string).getFullYear().toString() : "",
+              endDate: e.endDate ? new Date(e.endDate as string).getFullYear().toString() : "",
+              skills: (e.skills as string[]) || [],
+            })),
+          })
+        }
+      })
+      .finally(() => setLoading(false))
+  }, [user?.id])
+
+  async function handleSave() {
+    if (!user?.id) return
+    await fetch("/api/candidate/profile", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userId: user.id,
+        bio: profile.bio,
+        location: profile.location,
+        phone: profile.phone,
+        skills: profile.skills,
+        linkedInUrl: profile.linkedIn,
+        portfolioUrl: profile.portfolio,
+      }),
+    })
+    setIsEditing(false)
+  }
 
   const completionItems = [
     { label: "Datos personales", completed: true },
@@ -73,6 +109,14 @@ export default function CandidateProfilePage() {
   const completionPercentage = Math.round(
     (completionItems.filter((item) => item.completed).length / completionItems.length) * 100
   )
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -90,7 +134,13 @@ export default function CandidateProfilePage() {
         <div className="flex items-center gap-2">
           <Button
             variant={isEditing ? "fb" : "fb-outline"}
-            onClick={() => setIsEditing(!isEditing)}
+            onClick={() => {
+              if (isEditing) {
+                handleSave()
+              } else {
+                setIsEditing(true)
+              }
+            }}
           >
             {isEditing ? (
               <>
@@ -201,14 +251,6 @@ export default function CandidateProfilePage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="age">Edad</Label>
-                  <Input
-                    id="age"
-                    type="number"
-                    value={profile.age}
-                    onChange={(e) => setProfile({...profile, age: parseInt(e.target.value) || 0})}
-                    disabled={!isEditing}
-                  />
                 </div>
               </div>
               <div className="space-y-2">

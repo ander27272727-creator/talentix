@@ -244,47 +244,43 @@ export const useStore = create<AppState>()(
   user: null,
   isAuthenticated: false,
   login: async (email: string, password: string, name?: string, role?: UserRole) => {
-    // Simulated login - will connect to real auth later
-    const mockUsers: Record<string, User> = {
-      'candidato@talentix.com': {
-        id: '1',
-        email: 'candidato@talentix.com',
-        name: 'María García',
-        role: 'CANDIDATE',
-        createdAt: new Date().toISOString(),
-      },
-      'empresa@talentix.com': {
-        id: '2',
-        email: 'empresa@talentix.com',
-        name: 'TechCorp Solutions',
-        role: 'COMPANY',
-        createdAt: new Date().toISOString(),
-      },
-      'admin@talentix.com': {
-        id: '3',
-        email: 'admin@talentix.com',
-        name: 'Admin Talentix',
-        role: 'ADMIN',
-        createdAt: new Date().toISOString(),
-      },
+    // Si tiene name y role, es un registro
+    if (name && role) {
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, name, role }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Error al registrar')
+      const user: User = {
+        id: data.user.id,
+        email: data.user.email,
+        name: data.user.name,
+        role: data.user.role,
+        createdAt: data.user.createdAt,
+      }
+      set({ user, isAuthenticated: true, currentPortal: user.role })
+      return
     }
 
-    const existingUser = mockUsers[email]
-    if (existingUser) {
-      set({ user: existingUser, isAuthenticated: true, currentPortal: existingUser.role })
-    } else if (name && role) {
-      // New user registration
-      const newUser: User = {
-        id: `user-${Date.now()}`,
-        email,
-        name,
-        role,
-        createdAt: new Date().toISOString(),
-      }
-      set({ user: newUser, isAuthenticated: true, currentPortal: newUser.role })
-    } else {
-      throw new Error('Credenciales inválidas')
+    // Login normal contra Supabase
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    })
+    const data = await res.json()
+    if (!res.ok) throw new Error(data.error || 'Credenciales inválidas')
+    const user: User = {
+      id: data.user.id,
+      email: data.user.email,
+      name: data.user.name,
+      role: data.user.role,
+      avatar: data.user.avatar || undefined,
+      createdAt: data.user.createdAt,
     }
+    set({ user, isAuthenticated: true, currentPortal: user.role })
   },
   logout: () => {
     set({

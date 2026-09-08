@@ -1,105 +1,141 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import {
   Brain, Target, FileText, TrendingUp, ArrowRight, Clock,
   CheckCircle2, AlertCircle, Building2, Star, Sparkles,
-  BarChart3, Users, Zap, ChevronRight
+  Users, Loader2
 } from "lucide-react"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Separator } from "@/components/ui/separator"
 import { useStore } from "@/store/useStore"
 
-// Mock data
-const profileCompletion = 65
+interface MatchData {
+  id: string
+  overallMatch: number
+  recommendation: string
+  vacancy: {
+    title: string
+    company: { name: string; logo?: string }
+  }
+}
 
-const recentMatches = [
-  {
-    id: "1",
-    company: "TechCorp Solutions",
-    position: "Senior Developer",
-    score: 95,
-    recommendation: "highly_recommended",
-    logo: "TC",
-  },
-  {
-    id: "2",
-    company: "InnovateLab",
-    position: "Full Stack Engineer",
-    score: 88,
-    recommendation: "recommended",
-    logo: "IL",
-  },
-  {
-    id: "3",
-    company: "DataPro",
-    position: "Backend Developer",
-    score: 82,
-    recommendation: "recommended",
-    logo: "DP",
-  },
-]
+interface AssessmentData {
+  id: string
+  name: string
+  category: string
+  completed: boolean
+  score: number | null
+  questionCount: number
+}
 
-const pendingAssessments = [
-  {
-    id: "1",
-    name: "Evaluación Cognitiva - Razonamiento Lógico",
-    category: "COGNITIVE",
-    timeLimit: 15,
-    questions: 20,
-  },
-  {
-    id: "2",
-    name: "Perfil de Personalidad - Big Five",
-    category: "PSYCHOMETRIC",
-    timeLimit: 12,
-    questions: 30,
-  },
-]
-
-const stats = [
-  {
-    label: "Match Promedio",
-    value: "88%",
-    change: "+5%",
-    icon: Target,
-    color: "text-blue-600",
-    bg: "bg-blue-50",
-  },
-  {
-    label: "Evaluaciones Completadas",
-    value: "4/7",
-    change: "+2",
-    icon: Brain,
-    color: "text-purple-600",
-    bg: "bg-purple-50",
-  },
-  {
-    label: "Empresas Interesadas",
-    value: "3",
-    change: "+1",
-    icon: Building2,
-    color: "text-emerald-600",
-    bg: "bg-emerald-50",
-  },
-  {
-    label: "Visitas al Perfil",
-    value: "24",
-    change: "+8",
-    icon: Users,
-    color: "text-orange-600",
-    bg: "bg-orange-50",
-  },
-]
+interface ProfileData {
+  user: { name: string; email: string }
+  skills: string[]
+  education: { institution: string; degree: string }[]
+  experience: { company: string; position: string }[]
+  location?: string
+}
 
 export default function CandidateDashboard() {
   const { user } = useStore()
+  const [loading, setLoading] = useState(true)
+  const [profile, setProfile] = useState<ProfileData | null>(null)
+  const [matches, setMatches] = useState<MatchData[]>([])
+  const [assessments, setAssessments] = useState<AssessmentData[]>([])
   const firstName = user?.name?.split(" ")[0] || "Candidato"
+
+  useEffect(() => {
+    if (!user?.id) return
+    loadData()
+  }, [user?.id])
+
+  async function loadData() {
+    setLoading(true)
+    try {
+      const [profileRes, matchesRes, assessmentsRes] = await Promise.all([
+        fetch(`/api/candidate/profile?userId=${user!.id}`),
+        fetch(`/api/candidate/matches?userId=${user!.id}`),
+        fetch(`/api/candidate/assessments?userId=${user!.id}`),
+      ])
+
+      const profileData = await profileRes.json()
+      const matchesData = await matchesRes.json()
+      const assessmentsData = await assessmentsRes.json()
+
+      if (profileData.success) setProfile(profileData.profile)
+      if (matchesData.success) setMatches(matchesData.matches)
+      if (assessmentsData.success) setAssessments(assessmentsData.assessments)
+    } catch (err) {
+      console.error("Error cargando datos:", err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Calcular completitud del perfil
+  const profileFields = profile ? [
+    profile.user?.name,
+    profile.location,
+    profile.skills?.length > 0,
+    profile.education?.length > 0,
+    profile.experience?.length > 0,
+  ].filter(Boolean).length : 0
+  const profileCompletion = Math.round((profileFields / 5) * 100)
+
+  // Evaluaciones completadas
+  const completedAssessments = assessments.filter(a => a.completed).length
+  const totalAssessments = assessments.length
+  const pendingAssessments = assessments.filter(a => !a.completed).slice(0, 3)
+
+  // Stats
+  const avgMatch = matches.length > 0
+    ? Math.round(matches.reduce((sum, m) => sum + m.overallMatch, 0) / matches.length)
+    : 0
+  const highMatches = matches.filter(m => m.overallMatch >= 85).length
+
+  const stats = [
+    {
+      label: "Match Promedio",
+      value: `${avgMatch}%`,
+      icon: Target,
+      color: "text-blue-600",
+      bg: "bg-blue-50",
+    },
+    {
+      label: "Evaluaciones",
+      value: `${completedAssessments}/${totalAssessments}`,
+      icon: Brain,
+      color: "text-purple-600",
+      bg: "bg-purple-50",
+    },
+    {
+      label: "Matches Altos",
+      value: `${highMatches}`,
+      icon: Sparkles,
+      color: "text-emerald-600",
+      bg: "bg-emerald-50",
+    },
+    {
+      label: "Empresas Disponibles",
+      value: `${matches.length}`,
+      icon: Building2,
+      color: "text-orange-600",
+      bg: "bg-orange-50",
+    },
+  ]
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -122,7 +158,7 @@ export default function CandidateDashboard() {
       </div>
 
       {/* Profile Completion Banner */}
-      {profileCompletion < 100 && (
+      {profile && profileCompletion < 100 && (
         <Card className="border-2 border-fb-blue/20 bg-gradient-to-r from-fb-blue/5 to-fb-purple/5">
           <CardContent className="p-6">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -164,11 +200,8 @@ export default function CandidateDashboard() {
                 <div className={`w-12 h-12 rounded-xl ${stat.bg} flex items-center justify-center`}>
                   <stat.icon className={`h-6 w-6 ${stat.color}`} />
                 </div>
-                <Badge variant="success" className="text-xs">
-                  {stat.change}
-                </Badge>
               </div>
-              <div className="mt-4">
+              <div className="mt-3">
                 <div className="text-2xl font-bold">{stat.value}</div>
                 <div className="text-sm text-muted-foreground">{stat.label}</div>
               </div>
@@ -177,185 +210,106 @@ export default function CandidateDashboard() {
         ))}
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Top Matches */}
-        <Card className="lg:col-span-2">
+        <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="flex items-center gap-2">
-                  <Target className="h-5 w-5 text-primary" />
-                  Top Matches
-                </CardTitle>
-                <CardDescription>
-                  Empresas donde más encajas según tu perfil
-                </CardDescription>
-              </div>
-              <Link href="/candidate/matches">
-                <Button variant="ghost" size="sm">
-                  Ver todos
-                  <ChevronRight className="ml-1 h-4 w-4" />
-                </Button>
+            <CardTitle className="flex items-center justify-between">
+              <span>Tus Mejores Matches</span>
+              <Link href="/candidate/matches" className="text-sm text-primary hover:underline">
+                Ver todos
               </Link>
-            </div>
+            </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            {recentMatches.map((match) => (
-              <div
-                key={match.id}
-                className="flex items-center gap-4 p-4 rounded-xl bg-muted/50 hover:bg-muted transition-colors cursor-pointer"
-              >
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-fb-blue to-fb-purple flex items-center justify-center text-white font-bold">
-                  {match.logo}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="font-medium">{match.company}</div>
-                  <div className="text-sm text-muted-foreground">{match.position}</div>
-                </div>
-                <div className="text-right">
-                  <Badge 
-                    variant={match.recommendation === "highly_recommended" ? "highly-recommended" : "recommended"}
-                    className="mb-1"
-                  >
-                    {match.score}%
-                  </Badge>
-                  <div className="text-xs text-muted-foreground">
-                    {match.recommendation === "highly_recommended" ? "Altamente Recomendado" : "Recomendado"}
+          <CardContent className="space-y-3">
+            {matches.length === 0 ? (
+              <p className="text-muted-foreground text-center py-4">
+                Aún no tienes matches. Completa tus evaluaciones para obtener resultados.
+              </p>
+            ) : (
+              matches.slice(0, 4).map((match) => (
+                <div key={match.id} className="flex items-center gap-4 p-3 rounded-lg hover:bg-muted/50 transition-colors">
+                  <Avatar className="h-10 w-10">
+                    <AvatarFallback className="gradient-bg text-white text-sm">
+                      {match.vacancy.company.name.substring(0, 2).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm truncate">{match.vacancy.title}</p>
+                    <p className="text-xs text-muted-foreground">{match.vacancy.company.name}</p>
                   </div>
+                  <Badge variant={match.overallMatch >= 85 ? "success" : match.overallMatch >= 70 ? "info" : "secondary"}>
+                    {Math.round(match.overallMatch)}%
+                  </Badge>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </CardContent>
         </Card>
 
         {/* Pending Assessments */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Brain className="h-5 w-5 text-purple-600" />
-              Evaluaciones Pendientes
+            <CardTitle className="flex items-center justify-between">
+              <span>Evaluaciones Pendientes</span>
+              <Link href="/candidate/assessments" className="text-sm text-primary hover:underline">
+                Ver todas
+              </Link>
             </CardTitle>
-            <CardDescription>
-              Completa estas evaluaciones para mejorar tus matches
-            </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            {pendingAssessments.map((assessment) => (
-              <div
-                key={assessment.id}
-                className="p-4 rounded-xl border hover:bg-muted/50 transition-colors"
-              >
-                <div className="flex items-start justify-between mb-2">
-                  <Badge variant={assessment.category === "COGNITIVE" ? "info" : "purple"} className="text-xs">
-                    {assessment.category === "COGNITIVE" ? "Cognitiva" : "Psicométrica"}
-                  </Badge>
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                    <Clock className="h-3 w-3" />
-                    {assessment.timeLimit} min
-                  </div>
-                </div>
-                <h4 className="font-medium text-sm mb-1">{assessment.name}</h4>
-                <p className="text-xs text-muted-foreground mb-3">
-                  {assessment.questions} preguntas
-                </p>
-                <Button variant="fb-outline" size="sm" className="w-full">
-                  Comenzar
-                  <ArrowRight className="ml-2 h-3 w-3" />
-                </Button>
+          <CardContent className="space-y-3">
+            {pendingAssessments.length === 0 ? (
+              <div className="text-center py-4">
+                <CheckCircle2 className="h-12 w-12 text-emerald-500 mx-auto mb-2" />
+                <p className="text-muted-foreground">¡Completaste todas las evaluaciones!</p>
               </div>
-            ))}
-
-            <Link href="/candidate/assessments">
-              <Button variant="ghost" className="w-full">
-                Ver Todas las Evaluaciones
-                <ChevronRight className="ml-2 h-4 w-4" />
-              </Button>
-            </Link>
+            ) : (
+              pendingAssessments.map((assess) => (
+                <div key={assess.id} className="flex items-center gap-4 p-3 rounded-lg hover:bg-muted/50 transition-colors">
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                    assess.category === "COGNITIVE" ? "bg-blue-50" :
+                    assess.category === "PSYCHOMETRIC" ? "bg-purple-50" :
+                    assess.category === "BEHAVIORAL" ? "bg-emerald-50" : "bg-orange-50"
+                  }`}>
+                    <Brain className={`h-5 w-5 ${
+                      assess.category === "COGNITIVE" ? "text-blue-600" :
+                      assess.category === "PSYCHOMETRIC" ? "text-purple-600" :
+                      assess.category === "BEHAVIORAL" ? "text-emerald-600" : "text-orange-600"
+                    }`} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm truncate">{assess.name}</p>
+                    <p className="text-xs text-muted-foreground">{assess.questionCount} preguntas</p>
+                  </div>
+                  <Link href={`/candidate/assessments/${assess.id}`}>
+                    <Button size="sm" variant="fb-outline">Iniciar</Button>
+                  </Link>
+                </div>
+              ))
+            )}
           </CardContent>
         </Card>
       </div>
 
-      {/* AI Insights */}
-      <Card className="border-2 border-fb-purple/20 bg-gradient-to-r from-fb-purple/5 to-fb-blue/5">
+      {/* AI Insight */}
+      <Card className="bg-gradient-to-r from-fb-blue/5 to-fb-purple/5 border-fb-blue/20">
         <CardContent className="p-6">
           <div className="flex items-start gap-4">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-fb-purple to-fb-blue flex items-center justify-center">
-              <Sparkles className="h-6 w-6 text-white" />
+            <div className="w-10 h-10 rounded-xl gradient-bg flex items-center justify-center shrink-0">
+              <Sparkles className="h-5 w-5 text-white" />
             </div>
-            <div className="flex-1">
-              <h3 className="font-semibold flex items-center gap-2">
-                Insight de IA
-                <Badge variant="purple" className="text-xs">Nuevo</Badge>
-              </h3>
-              <p className="text-sm text-muted-foreground mt-1">
-                Basado en tus evaluaciones y el mercado actual, tu perfil es altamente demandado 
-                en empresas de tecnología remote-first. Las empresas con mejor fit para ti están 
-                buscando activamente tu perfil. Considera completar la evaluación de liderazgo 
-                para desbloquear匹配 más directivos.
+            <div>
+              <h3 className="font-semibold mb-1">💡 Insight de IA</h3>
+              <p className="text-sm text-muted-foreground">
+                {matches.length > 0
+                  ? `Tienes ${highMatches} matches de alta compatibilidad. Tus habilidades en ${profile?.skills?.slice(0, 3).join(", ") || "tu perfil"} están en alta demanda. Completar más evaluaciones mejorará la precisión de tus matches.`
+                  : `Comienza completando tu perfil y evaluaciones para que nuestra IA pueda encontrar las mejores oportunidades para ti.`
+                }
               </p>
-              <div className="flex gap-2 mt-4">
-                <Link href="/candidate/career-path">
-                  <Button variant="fb" size="sm">
-                    <BarChart3 className="mr-2 h-4 w-4" />
-                    Ver Career Path
-                  </Button>
-                </Link>
-                <Link href="/candidate/assessments">
-                  <Button variant="fb-outline" size="sm">
-                    <Brain className="mr-2 h-4 w-4" />
-                    Completar Evaluaciones
-                  </Button>
-                </Link>
-              </div>
             </div>
           </div>
         </CardContent>
       </Card>
-
-      {/* Quick Actions */}
-      <div className="grid sm:grid-cols-3 gap-4">
-        <Link href="/candidate/profile">
-          <Card className="hover:shadow-md transition-all duration-200 hover:-translate-y-1 cursor-pointer h-full">
-            <CardContent className="p-6 text-center">
-              <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center mx-auto mb-3">
-                <FileText className="h-6 w-6 text-blue-600" />
-              </div>
-              <h3 className="font-medium mb-1">Actualizar CV</h3>
-              <p className="text-xs text-muted-foreground">
-                Mantén tu perfil actualizado para mejores matches
-              </p>
-            </CardContent>
-          </Card>
-        </Link>
-
-        <Link href="/candidate/vacancies">
-          <Card className="hover:shadow-md transition-all duration-200 hover:-translate-y-1 cursor-pointer h-full">
-            <CardContent className="p-6 text-center">
-              <div className="w-12 h-12 rounded-xl bg-emerald-50 flex items-center justify-center mx-auto mb-3">
-                <Zap className="h-6 w-6 text-emerald-600" />
-              </div>
-              <h3 className="font-medium mb-1">Explorar Vacantes</h3>
-              <p className="text-xs text-muted-foreground">
-                Descubre oportunidades que coinciden con tu perfil
-              </p>
-            </CardContent>
-          </Card>
-        </Link>
-
-        <Link href="/candidate/career-path">
-          <Card className="hover:shadow-md transition-all duration-200 hover:-translate-y-1 cursor-pointer h-full">
-            <CardContent className="p-6 text-center">
-              <div className="w-12 h-12 rounded-xl bg-purple-50 flex items-center justify-center mx-auto mb-3">
-                <TrendingUp className="h-6 w-6 text-purple-600" />
-              </div>
-              <h3 className="font-medium mb-1">Career Path</h3>
-              <p className="text-xs text-muted-foreground">
-                Descubre tu mejor camino profesional
-              </p>
-            </CardContent>
-          </Card>
-        </Link>
-      </div>
     </div>
   )
 }
