@@ -360,11 +360,55 @@ export default function AssessmentPage({ params }: { params: Promise<{ id: strin
   useEffect(() => {
     params.then(p => {
       setAssessmentId(p.id)
-      const found = assessmentDB[p.id]
-      if (found) {
-        setAssessment(found)
-        setTimeLeft(found.timeLimitMinutes * 60)
-      }
+      // Intentar cargar desde Supabase primero
+      fetch(`/api/assessments/${p.id}`)
+        .then(r => r.json())
+        .then(data => {
+          if (data.success && data.assessment) {
+            const a = data.assessment
+            // Mapear preguntas de Supabase al formato UI
+            const questions = (a.questions || []).map((q: Record<string, unknown>, i: number) => {
+              const opts = (q.options as Array<{text: string; value: number}>) || []
+              return {
+                id: q.id as string || `q${i}`,
+                type: (q.type as string)?.toLowerCase().replace(/_/g, '_') || 'MULTIPLE_CHOICE',
+                dimension: q.dimension as string || 'general',
+                text: q.text as string,
+                scenario: q.scenario as string || undefined,
+                options: opts.map((o, j: number) => ({
+                  text: o.text,
+                  value: j,
+                  dimension: q.dimension as string || 'general',
+                })),
+                weights: { [q.dimension as string || 'general']: 1.0 },
+              }
+            })
+            setAssessment({
+              name: a.name,
+              category: a.category,
+              description: a.description,
+              timeLimitMinutes: a.timeLimitMinutes,
+              dimensions: [...new Set(a.questions?.map((q: Record<string, unknown>) => q.dimension as string) || [])] as string[],
+              questions,
+            })
+            setTimeLeft((a.timeLimitMinutes || 15) * 60)
+          } else {
+            // Fallback al DB local
+            const found = assessmentDB[p.id]
+            if (found) {
+              setAssessment(found)
+              setTimeLeft(found.timeLimitMinutes * 60)
+            }
+          }
+        })
+        .catch(() => {
+          // Fallback al DB local
+          const found = assessmentDB[p.id]
+          if (found) {
+            setAssessment(found)
+            setTimeLeft(found.timeLimitMinutes * 60)
+          }
+        })
     })
   }, [params])
 

@@ -1,30 +1,57 @@
 "use client"
 
-import { Briefcase, MapPin, DollarSign, Clock, ArrowRight, Sparkles, Globe, Building2, Map } from "lucide-react"
+import { useState, useEffect } from "react"
+import { Briefcase, MapPin, Globe, Building2, Map, Loader2, Search } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { useState } from "react"
+import { useStore } from "@/store/useStore"
 
-const typeConfig: Record<string, { label: string; icon: any; color: string }> = {
+interface VacancyData {
+  id: string
+  title: string
+  description: string
+  location: string
+  type: string
+  category: string
+  salaryMin?: number
+  salaryMax?: number
+  salaryCurrency?: string
+  company: { name: string; industry: string; logo?: string; location: string; size: string }
+}
+
+const typeConfig: Record<string, { label: string; icon: typeof Globe; color: string }> = {
   REMOTE: { label: "Remoto", icon: Globe, color: "bg-emerald-100 text-emerald-800" },
   HYBRID: { label: "Híbrido", icon: Building2, color: "bg-amber-100 text-amber-800" },
   ONSITE: { label: "Presencial", icon: Map, color: "bg-blue-100 text-blue-800" },
 }
 
-const vacancies = [
-  { id: "1", company: "TechCorp Solutions", title: "Senior Full Stack Developer", location: "Global", type: "REMOTE", salary: "$80,000 - $120,000", match: 95, posted: "Hace 2 días", applicants: 12, country: "Global" },
-  { id: "2", company: "InnovateLab", title: "Full Stack Engineer", location: "Madrid", type: "HYBRID", salary: "$70,000 - $95,000", match: 88, posted: "Hace 5 días", applicants: 18, country: "España" },
-  { id: "3", company: "DataPro Analytics", title: "Backend Developer", location: "LATAM", type: "REMOTE", salary: "$75,000 - $100,000", match: 82, posted: "Hace 1 semana", applicants: 24, country: "LATAM" },
-  { id: "4", company: "StartupXYZ", title: "CTO / Technical Lead", location: "Global", type: "REMOTE", salary: "$120,000 - $160,000", match: 78, posted: "Hace 3 días", applicants: 8, country: "Global" },
-  { id: "5", company: "GlobalTech Corp", title: "Software Engineer", location: "Barcelona", type: "ONSITE", salary: "$65,000 - $85,000", match: 72, posted: "Hace 1 semana", applicants: 32, country: "España" },
-]
-
 export default function CandidateVacanciesPage() {
-  const [filterType, setFilterType] = useState<string>("all")
+  const { user } = useStore()
+  const [loading, setLoading] = useState(true)
+  const [vacancies, setVacancies] = useState<VacancyData[]>([])
+  const [filterType, setFilterType] = useState("ALL")
+  const [search, setSearch] = useState("")
 
-  const filtered = filterType === "all" ? vacancies : vacancies.filter(v => v.type === filterType)
+  useEffect(() => {
+    fetch("/api/candidate/vacancies")
+      .then(r => r.json())
+      .then(data => {
+        if (data.success) setVacancies(data.vacancies)
+      })
+      .finally(() => setLoading(false))
+  }, [])
+
+  const filtered = vacancies.filter(v => {
+    if (filterType !== "ALL" && v.type !== filterType) return false
+    if (search && !v.title.toLowerCase().includes(search.toLowerCase()) && !v.company.name.toLowerCase().includes(search.toLowerCase())) return false
+    return true
+  })
+
+  if (loading) {
+    return <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+  }
 
   return (
     <div className="space-y-6">
@@ -33,81 +60,64 @@ export default function CandidateVacanciesPage() {
           <Briefcase className="h-8 w-8 text-primary" />
           Vacantes Disponibles
         </h1>
-        <p className="text-muted-foreground mt-1">Oportunidades que coinciden con tu perfil según nuestra IA.</p>
+        <p className="text-muted-foreground mt-1">{vacancies.length} vacantes activas en la plataforma.</p>
       </div>
-
-      <Card className="border-2 border-fb-purple/20 bg-gradient-to-r from-fb-purple/5 to-fb-blue/5">
-        <CardContent className="p-4 flex items-center gap-3">
-          <Sparkles className="h-5 w-5 text-fb-purple shrink-0" />
-          <p className="text-sm">Estas vacantes fueron seleccionadas automáticamente según tus preferencias de trabajo y evaluaciones.</p>
-        </CardContent>
-      </Card>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-2">
-        {[
-          { value: "all", label: "Todas" },
-          { value: "REMOTE", label: "🌍 Remoto" },
-          { value: "HYBRID", label: "🏢 Híbrido" },
-          { value: "ONSITE", label: "📍 Presencial" },
-        ].map((f) => (
-          <button
-            key={f.value}
-            onClick={() => setFilterType(f.value)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-              filterType === f.value
-                ? "gradient-bg text-white shadow-md"
-                : "bg-muted hover:bg-muted/80"
-            }`}
-          >
-            {f.label}
-          </button>
-        ))}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input placeholder="Buscar cargo o empresa..." value={search} onChange={e => setSearch(e.target.value)} className="pl-10" />
+        </div>
+        <div className="flex gap-2">
+          {["ALL", "REMOTE", "HYBRID", "ONSITE"].map(t => (
+            <Button key={t} size="sm" variant={filterType === t ? "fb" : "outline"} onClick={() => setFilterType(t)}>
+              {t === "ALL" ? "Todas" : typeConfig[t]?.label || t}
+            </Button>
+          ))}
+        </div>
       </div>
 
-      <div className="space-y-4">
-        {filtered.map((vacancy) => {
-          const tc = typeConfig[vacancy.type]
-          const TypeIcon = tc.icon
-          return (
-            <Card key={vacancy.id} className="hover:shadow-lg transition-all duration-300">
-              <CardContent className="p-6">
-                <div className="flex flex-col lg:flex-row lg:items-center gap-4">
-                  <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-fb-blue to-fb-purple flex items-center justify-center text-white font-bold shrink-0">
-                    {vacancy.company.split(" ").map(n => n[0]).join("").substring(0, 2)}
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="font-semibold text-lg">{vacancy.company}</h3>
-                      <Badge className={tc.color}>
-                        <TypeIcon className="h-3 w-3 mr-1" />
-                        {tc.label}
-                      </Badge>
-                      <Badge variant="outline">{vacancy.country}</Badge>
+      {/* Vacancies */}
+      {filtered.length === 0 ? (
+        <Card>
+          <CardContent className="p-8 text-center">
+            <Briefcase className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+            <p className="text-muted-foreground">No se encontraron vacantes con esos filtros.</p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {filtered.map(v => {
+            const tc = typeConfig[v.type] || typeConfig.ONSITE
+            const Icon = tc.icon
+            return (
+              <Card key={v.id} className="hover:shadow-md transition-all">
+                <CardContent className="p-6">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="w-12 h-12 rounded-xl gradient-bg flex items-center justify-center text-white font-bold text-sm">
+                      {v.company.name.substring(0, 2).toUpperCase()}
                     </div>
-                    <div className="text-muted-foreground">{vacancy.title}</div>
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
-                      <span className="flex items-center gap-1"><MapPin className="h-3 w-3" /> {vacancy.location}</span>
-                      <span className="flex items-center gap-1"><DollarSign className="h-3 w-3" /> {vacancy.salary}</span>
-                      <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {vacancy.posted}</span>
-                    </div>
+                    <Badge className={tc.color}><Icon className="h-3 w-3 mr-1" /> {tc.label}</Badge>
                   </div>
-                  <div className="flex items-center gap-6">
-                    <div className="text-center">
-                      <div className="text-3xl font-bold gradient-text">{vacancy.match}%</div>
-                      <div className="text-xs text-muted-foreground">Match</div>
-                    </div>
-                    <Button variant="fb">
-                      Ver Detalles
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </Button>
+                  <h3 className="font-semibold text-lg mb-1">{v.title}</h3>
+                  <p className="text-sm text-muted-foreground">{v.company.name}</p>
+                  <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
+                    <span className="flex items-center gap-1"><MapPin className="h-3 w-3" /> {v.location}</span>
+                    {v.salaryMin && v.salaryMax && (
+                      <span>${v.salaryMin.toLocaleString()} - ${v.salaryMax.toLocaleString()} {v.salaryCurrency}</span>
+                    )}
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          )
-        })}
-      </div>
+                  <p className="text-sm text-muted-foreground mt-3 line-clamp-2">{v.description}</p>
+                  <Button variant="fb-outline" className="w-full mt-4" size="sm">
+                    Ver Detalles
+                  </Button>
+                </CardContent>
+              </Card>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }
