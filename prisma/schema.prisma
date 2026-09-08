@@ -238,6 +238,7 @@ model VacancyAssessment {
 
 model Question {
   id              String     @id @default(cuid())
+  questionId      String     @unique  // External ID for UI reference
   assessmentId    String
   type            QuestionType
   dimension       String
