@@ -473,6 +473,7 @@ export default function AssessmentPage({ params }: { params: Promise<{ id: strin
   }
 
   const calculateScores = useCallback((finalAnswers: Answer[]) => {
+    const store = useStore.getState()
     if (!assessment) return
 
     const dimensionScores: Record<string, { total: number; count: number }> = {}
@@ -504,22 +505,45 @@ export default function AssessmentPage({ params }: { params: Promise<{ id: strin
     setIsCompleted(true)
     setShowResults(true)
 
-    // Save to store
-    addAssessmentResponse({
-      id: `resp-${Date.now()}`,
-      candidateId: "1",
-      assessmentId,
-      answers: finalAnswers,
-      startedAt: new Date(Date.now() - totalTimeSpent * 1000).toISOString(),
-      completedAt: new Date().toISOString(),
-      score: overallScore,
-      dimensionScores: finalScores,
-    })
+    // Save to Supabase API
+    const user = useStore.getState().user
+    if (user?.id) {
+      fetch(`/api/assessments/${assessmentId}/submit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user.id,
+          answers: finalAnswers.map(a => ({
+            questionId: a.questionId,
+            value: a.value,
+            timeSpentSeconds: a.timeSpentSeconds,
+          })),
+          score: overallScore,
+          dimensionScores: finalScores,
+          totalTimeSpent,
+        }),
+      }).then(r => r.json())
+      .then(data => {
+        if (data.success) {
+          addAssessmentResponse({
+            id: data.response.id,
+            candidateId: user.id,
+            assessmentId,
+            answers: finalAnswers,
+            startedAt: new Date(Date.now() - totalTimeSpent * 1000).toISOString(),
+            completedAt: new Date().toISOString(),
+            score: overallScore,
+            dimensionScores: finalScores,
+          })
+        }
+      })
+      .catch(err => console.error('Error guardando respuesta:', err))
+    }
 
-    addNotification({
+    store.addNotification({
       id: `notif-${Date.now()}`,
       type: "success",
-      title: "Evaluación Completada",
+      title: "¡Evaluación Completada!",
       message: `Has obtenido ${overallScore}% en ${assessment.name}`,
       createdAt: new Date().toISOString(),
     })
