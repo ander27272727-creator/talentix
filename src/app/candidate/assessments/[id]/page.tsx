@@ -71,7 +71,13 @@ export default function AssessmentPage({ params }: { params: Promise<{ id: strin
           if (data.success && data.assessment) {
             const a = data.assessment
             const questions = (a.questions || []).map((q: Record<string, unknown>, i: number) => {
-              const opts = (q.options as Array<{text: string; value: number}>) || []
+              // Las opciones pueden llegar como string JSON (de Supabase) o como array
+              let opts: Array<{text: string; value: number}> = []
+              if (typeof q.options === 'string') {
+                try { opts = JSON.parse(q.options) } catch { opts = [] }
+              } else if (Array.isArray(q.options)) {
+                opts = q.options as Array<{text: string; value: number}>
+              }
               return {
                 id: q.id as string || `q${i}`,
                 type: (q.type as string)?.toLowerCase().replace(/_/g, '_') || 'MULTIPLE_CHOICE',
