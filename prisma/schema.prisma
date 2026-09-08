@@ -1,0 +1,417 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== USERS ====================
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  passwordHash  String
+  name          String
+  role          UserRole  @default(CANDIDATE)
+  avatar        String?
+  emailVerified DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  candidateProfile CandidateProfile?
+  company          Company?
+  aiLearningData   AILearningEntry[]
+
+  @@index([email])
+  @@index([role])
+}
+
+enum UserRole {
+  CANDIDATE
+  COMPANY
+  ADMIN
+}
+
+// ==================== CANDIDATE ====================
+
+model CandidateProfile {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  bio          String?
+  location     String?
+  phone        String?
+  linkedInUrl  String?
+  portfolioUrl String?
+  cvUrl        String?
+  skills       String[] // PostgreSQL array
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  user             User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  education        Education[]
+  experience       Experience[]
+  assessments      AssessmentResponse[]
+  matches          MatchResult[]        @relation("CandidateMatches")
+  referrals        Referral[]           @relation("CandidateReferrals")
+
+  @@index([userId])
+}
+
+model Education {
+  id            String  @id @default(cuid())
+  candidateId   String
+  institution   String
+  degree        String
+  field         String
+  startDate     DateTime
+  endDate       DateTime?
+  current       Boolean @default(false)
+
+  candidate CandidateProfile @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+
+  @@index([candidateId])
+}
+
+model Experience {
+  id          String   @id @default(cuid())
+  candidateId String
+  company     String
+  position    String
+  description String
+  startDate   DateTime
+  endDate     DateTime?
+  current     Boolean  @default(false)
+  skills      String[]
+
+  candidate CandidateProfile @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+
+  @@index([candidateId])
+}
+
+// ==================== COMPANY ====================
+
+model Company {
+  id            String      @id @default(cuid())
+  name          String
+  industry      String
+  size          String      // "1-10", "11-50", "51-200", "201-500", "500+"
+  logo          String?
+  description   String
+  website       String?
+  location      String
+  culture       String[]
+  benefits      String[]
+  plan          CompanyPlan @default(TRIAL)
+  planExpiresAt DateTime?
+  trialUsed     Boolean     @default(false)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  // Relations
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String      @unique
+  vacancies   Vacancy[]
+  referrals   Referral[]
+
+  @@index([userId])
+  @@index([plan])
+}
+
+enum CompanyPlan {
+  TRIAL
+  STARTER
+  PROFESSIONAL
+  ENTERPRISE
+  CUSTOM
+}
+
+model PlanPricing {
+  id              String    @id @default(cuid())
+  plan            CompanyPlan @unique
+  name            String
+  description     String
+  monthlyPrice    Decimal   @db.Decimal(10, 2)
+  annualPrice     Decimal   @db.Decimal(10, 2)
+  maxVacancies    Int
+  maxCandidates   Int
+  maxAssessments  Int
+  hasAPIAccess    Boolean   @default(false)
+  hasCustomAssess Boolean   @default(false)
+  hasAnalytics    Boolean   @default(false)
+  hasExport       Boolean   @default(false)
+  hasDedicatedCSM Boolean   @default(false)
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+// ==================== VACANCY ====================
+
+model Vacancy {
+  id              String        @id @default(cuid())
+  companyId       String
+  title           String
+  description     String
+  requirements    String[]
+  salaryMin       Decimal?      @db.Decimal(10, 2)
+  salaryMax       Decimal?      @db.Decimal(10, 2)
+  salaryCurrency  String        @default("USD")
+  location        String
+  type            VacancyType   @default(ONSITE)
+  status          VacancyStatus @default(DRAFT)
+  category        String        // "technology", "sales", "marketing", etc.
+  assessmentConfig Json?         // AssessmentWeights as JSON
+
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  // Relations
+  company     Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  assessments VacancyAssessment[]
+  matches     MatchResult[]
+  referrals   Referral[]
+
+  @@index([companyId])
+  @@index([status])
+  @@index([category])
+  @@index([location])
+}
+
+enum VacancyType {
+  REMOTE
+  HYBRID
+  ONSITE
+}
+
+enum VacancyStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  CLOSED
+}
+
+// ==================== ASSESSMENT ====================
+
+model Assessment {
+  id                  String             @id @default(cuid())
+  name                String
+  category            AssessmentCategory
+  description         String
+  timeLimitMinutes    Int
+  targetRoles         String[]
+  isActive            Boolean            @default(true)
+  createdBy           String?
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+
+  questions           Question[]
+  vacancyAssessments  VacancyAssessment[]
+  responses           AssessmentResponse[]
+
+  @@index([category])
+  @@index([isActive])
+}
+
+enum AssessmentCategory {
+  PSYCHOMETRIC
+  COGNITIVE
+  BEHAVIORAL
+  TECHNICAL
+}
+
+model VacancyAssessment {
+  id          String     @id @default(cuid())
+  vacancyId   String
+  assessmentId String
+  weight      Float      @default(1.0) // Weight for this assessment in the vacancy
+
+  vacancy   Vacancy   @relation(fields: [vacancyId], references: [id], onDelete: Cascade)
+  assessment Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+
+  @@unique([vacancyId, assessmentId])
+  @@index([vacancyId])
+}
+
+model Question {
+  id              String     @id @default(cuid())
+  assessmentId    String
+  type            QuestionType
+  dimension       String
+  subDimension    String?
+  text            String
+  scenario        String?    // For scenario-based questions
+  options         Json       // Array of options with weights
+  reverseScored   Boolean    @default(false)
+  order           Int
+  createdAt       DateTime   @default(now())
+
+  assessment Assessment         @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  answers    AssessmentAnswer[]
+
+  @@index([assessmentId])
+  @@index([dimension])
+}
+
+enum QuestionType {
+  LIKERT_SCALE
+  MULTIPLE_CHOICE
+  SCENARIO
+  RANKING
+  OPEN_ENDED
+}
+
+// ==================== ASSESSMENT RESPONSES ====================
+
+model AssessmentResponse {
+  id            String    @id @default(cuid())
+  candidateId   String
+  assessmentId  String
+  vacancyId     String?   // Optional - if taken for specific vacancy
+  startedAt     DateTime  @default(now())
+  completedAt   DateTime?
+  totalTimeSpent Int?     // In seconds
+  score         Float?    // Overall score 0-100
+  dimensionScores Json?   // Scores per dimension
+  isValid       Boolean   @default(true)
+  fraudFlags    Json?     // Array of fraud indicators
+
+  candidate  CandidateProfile @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  assessment Assessment       @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  answers    AssessmentAnswer[]
+
+  @@index([candidateId])
+  @@index([assessmentId])
+  @@index([completedAt])
+}
+
+model AssessmentAnswer {
+  id              String   @id @default(cuid())
+  responseId      String
+  questionId      String
+  value           Json     // The answer value (string or number)
+  timeSpentSeconds Int     // Time spent on this question
+  createdAt       DateTime @default(now())
+
+  response AssessmentResponse @relation(fields: [responseId], references: [id], onDelete: Cascade)
+  question Question           @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@index([responseId])
+  @@index([questionId])
+}
+
+// ==================== MATCHING ====================
+
+model MatchResult {
+  id                    String  @id @default(cuid())
+  candidateId           String
+  vacancyId             String
+  companyId             String
+
+  // Company Fit Score (how well candidate fits company needs)
+  companyFitScore       Float
+  companyFitBreakdown   Json    // { skillsMatch, assessmentMatch, experienceMatch, culturalFit }
+
+  // Candidate Fit Score (how well company fits candidate needs)
+  candidateFitScore     Float
+  candidateFitBreakdown Json    // { careerGrowth, salaryFit, cultureMatch, locationFit }
+
+  // Overall
+  overallMatch          Float
+  recommendation        String  // "highly_recommended", "recommended", "possible", "low_fit"
+
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  candidate CandidateProfile @relation("CandidateMatches", fields: [candidateId], references: [id], onDelete: Cascade)
+  vacancy   Vacancy          @relation(fields: [vacancyId], references: [id], onDelete: Cascade)
+
+  @@unique([candidateId, vacancyId])
+  @@index([candidateId])
+  @@index([vacancyId])
+  @@index([overallMatch(sort: Desc)])
+  @@index([recommendation])
+}
+
+// ==================== REFERRALS ====================
+
+model Referral {
+  id          String         @id @default(cuid())
+  candidateId String
+  vacancyId   String
+  companyId   String
+  status      ReferralStatus @default(PENDING)
+  matchScore  Float
+  referredAt  DateTime       @default(now())
+  viewedAt    DateTime?
+  contactedAt DateTime?
+  notes       String?
+  feedback    Json?          // Company feedback on candidate
+
+  candidate CandidateProfile @relation("CandidateReferrals", fields: [candidateId], references: [id], onDelete: Cascade)
+  vacancy   Vacancy          @relation(fields: [vacancyId], references: [id], onDelete: Cascade)
+  company   Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([candidateId])
+  @@index([vacancyId])
+  @@index([companyId])
+  @@index([status])
+}
+
+enum ReferralStatus {
+  PENDING
+  VIEWED
+  CONTACTED
+  INTERVIEW
+  OFFER
+  HIRED
+  REJECTED
+}
+
+// ==================== AI LEARNING ====================
+
+model AILearningEntry {
+  id          String   @id @default(cuid())
+  userId      String
+  eventType   String   // "hire", "reject", "interview", "feedback"
+  entityType  String   // "candidate", "vacancy", "match"
+  entityId    String
+  data        Json     // Learning data
+  weight      Float    @default(1.0) // Importance weight
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([eventType])
+  @@index([entityType])
+  @@index([createdAt])
+}
+
+model AIModelVersion {
+  id          String   @id @default(cuid())
+  version     String
+  description String
+  accuracy    Float?
+  parameters  Json
+  isActive    Boolean  @default(false)
+  trainedAt   DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  @@index([isActive])
+}
+
+// ==================== ANALYTICS ====================
+
+model AnalyticsEvent {
+  id        String   @id @default(cuid())
+  eventType String
+  userId    String?
+  data      Json
+  createdAt DateTime @default(now())
+
+  @@index([eventType])
+  @@index([createdAt])
+}
