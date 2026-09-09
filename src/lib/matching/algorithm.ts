@@ -2,7 +2,7 @@ import { roleAssessmentWeights } from "@/lib/assessments/questions"
 
 // ==================== TYPES ====================
 
-interface CandidateProfile {
+export interface CandidateProfile {
   id: string
   skills: string[]
   experience: Experience[]
@@ -22,20 +22,20 @@ interface CandidateProfile {
   availableForTravel?: boolean
 }
 
-interface Experience {
+export interface Experience {
   company: string
   position: string
   years: number
   skills: string[]
 }
 
-interface Education {
+export interface Education {
   degree: string
   field: string
   level: number // 1=High School, 2=Associate, 3=Bachelor, 4=Master, 5=PhD
 }
 
-interface Vacancy {
+export interface Vacancy {
   id: string
   title: string
   category: string
@@ -62,7 +62,7 @@ interface Vacancy {
   requireTravel?: boolean
 }
 
-interface CompanyProfile {
+export interface CompanyProfile {
   id: string
   name: string
   industry: string
@@ -72,7 +72,7 @@ interface CompanyProfile {
   growthRate: number // 0-100, company growth indicator
 }
 
-interface MatchResult {
+export interface MatchResult {
   candidateId: string
   vacancyId: string
   companyId: string
