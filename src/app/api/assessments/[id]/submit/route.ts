@@ -25,17 +25,21 @@ export async function POST(
       return NextResponse.json({ error: 'Perfil de candidato no encontrado' }, { status: 404 })
     }
 
-    // Guardar respuesta
+    // Guardar respuesta junto con sus respuestas individuales (relación anidada)
     const response = await prisma.assessmentResponse.create({
       data: {
         candidateId: profile.id,
         assessmentId,
-        answers: answers.map((a: { questionId: string; value: number | string; timeSpentSeconds: number }) => ({
-          questionId: a.questionId,
-          value: a.value,
-          timeSpentSeconds: a.timeSpentSeconds,
-        })),
-        startedAt: new Date(),
+        answers: {
+          create: answers
+            .filter((a: { questionId?: string }) => !!a.questionId)
+            .map((a: { questionId: string; value: number | string; timeSpentSeconds: number }) => ({
+              questionId: a.questionId,
+              value: a.value,
+              timeSpentSeconds: a.timeSpentSeconds ?? 0,
+            })),
+        },
+        startedAt: new Date(Date.now() - (totalTimeSpent || 0) * 1000),
         completedAt: new Date(),
         score,
         dimensionScores,

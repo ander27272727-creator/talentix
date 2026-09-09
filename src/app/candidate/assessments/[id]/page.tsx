@@ -640,9 +640,34 @@ export default function AssessmentPage({ params }: { params: Promise<{ id: strin
             score: overallScore,
             dimensionScores: finalScores,
           })
+          store.addNotification({
+            id: `save-ok-${Date.now()}`,
+            type: "success",
+            title: "Resultado guardado",
+            message: "Tu evaluación quedó registrada en tu perfil y tus matches fueron actualizados.",
+            createdAt: new Date().toISOString(),
+          })
+        } else {
+          console.error('Error guardando respuesta:', data.error)
+          store.addNotification({
+            id: `save-err-${Date.now()}`,
+            type: "error",
+            title: "No se pudo guardar",
+            message: data.error || "Tu resultado no se guardó. Inténtalo de nuevo desde la lista de evaluaciones.",
+            createdAt: new Date().toISOString(),
+          })
         }
       })
-      .catch(err => console.error('Error guardando respuesta:', err))
+      .catch(err => {
+        console.error('Error guardando respuesta:', err)
+        store.addNotification({
+          id: `save-err-${Date.now()}`,
+          type: "error",
+          title: "No se pudo guardar",
+          message: "Error de conexión. Tu resultado no se guardó — vuelve a intentarlo.",
+          createdAt: new Date().toISOString(),
+        })
+      })
     }
 
     store.addNotification({
