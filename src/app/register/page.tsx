@@ -28,6 +28,7 @@ function RegisterContent() {
   })
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const router = useRouter()
   const { login } = useStore()
 
@@ -38,21 +39,32 @@ function RegisterContent() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setIsLoading(true)
+    setError(null)
 
-    // Simulate registration
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
-    // Auto login after registration
-    await login(formData.email, formData.password, formData.name, role)
-    const user = useStore.getState().user
-    if (user?.role === "CANDIDATE") {
-      router.push("/candidate")
-    } else {
-      router.push("/company")
+    if (formData.password !== formData.confirmPassword) {
+      setError("Las contraseñas no coinciden")
+      return
     }
-    
-    setIsLoading(false)
+    if (formData.password.length < 6) {
+      setError("La contraseña debe tener al menos 6 caracteres")
+      return
+    }
+
+    setIsLoading(true)
+    try {
+      // Registro real con Supabase Auth + BD
+      await login(formData.email, formData.password, formData.name, role)
+      const user = useStore.getState().user
+      if (user?.role === "CANDIDATE") {
+        router.push("/candidate")
+      } else {
+        router.push("/company")
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al crear la cuenta. Intenta de nuevo.")
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const benefits = {
@@ -170,6 +182,11 @@ function RegisterContent() {
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-4">
+                {error && (
+                  <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
+                    {error}
+                  </div>
+                )}
                 {role === "COMPANY" && (
                   <>
                     <div className="space-y-2">
