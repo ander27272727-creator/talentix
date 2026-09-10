@@ -46,6 +46,10 @@ model CandidateProfile {
   linkedInUrl  String?
   portfolioUrl String?
   cvUrl        String?
+  cvFileName   String?
+  cvFileSize   Int?
+  cvUploadedAt DateTime?
+  cvData       String? // base64 del archivo (max 2.5MB)
   skills       String[] // PostgreSQL array
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt

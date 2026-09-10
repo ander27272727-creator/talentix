@@ -15,6 +15,7 @@ export interface User {
   name: string
   role: UserRole
   avatar?: string
+  companyId?: string
   createdAt: string
 }
 
@@ -258,6 +259,7 @@ export const useStore = create<AppState>()(
         email: data.user.email,
         name: data.user.name,
         role: data.user.role,
+        companyId: data.companyId || undefined,
         createdAt: data.user.createdAt,
       }
       set({ user, isAuthenticated: true, currentPortal: user.role })
@@ -278,6 +280,7 @@ export const useStore = create<AppState>()(
       name: data.user.name,
       role: data.user.role,
       avatar: data.user.avatar || undefined,
+      companyId: data.user.company?.id || undefined,
       createdAt: data.user.createdAt,
     }
     set({ user, isAuthenticated: true, currentPortal: user.role })

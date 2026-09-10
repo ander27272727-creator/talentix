@@ -49,8 +49,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Si es empresa, crear perfil de empresa
+    let companyId: string | undefined
     if (role === 'COMPANY') {
-      await prisma.company.create({
+      const company = await prisma.company.create({
         data: {
           userId: user.id,
           name: companyName || name.trim(),
@@ -63,6 +64,7 @@ export async function POST(request: NextRequest) {
           plan: 'TRIAL',
         },
       })
+      companyId = company.id
     }
 
     // Retornar usuario sin passwordHash
@@ -71,6 +73,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       user: userWithoutPassword,
+      companyId,
       message: 'Cuenta creada exitosamente',
     })
   } catch (error) {

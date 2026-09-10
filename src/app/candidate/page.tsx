@@ -97,6 +97,7 @@ export default function CandidateDashboard() {
     ? Math.round(matches.reduce((sum, m) => sum + m.overallMatch, 0) / matches.length)
     : 0
   const highMatches = matches.filter(m => m.overallMatch >= 85).length
+  const uniqueCompanies = new Set(matches.map(m => m.vacancy.company.name)).size
 
   const stats = [
     {
@@ -121,8 +122,8 @@ export default function CandidateDashboard() {
       bg: "bg-emerald-50",
     },
     {
-      label: "Empresas Disponibles",
-      value: `${matches.length}`,
+      label: "Empresas con Match",
+      value: `${uniqueCompanies}`,
       icon: Building2,
       color: "text-orange-600",
       bg: "bg-orange-50",
