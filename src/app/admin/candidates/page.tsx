@@ -1,342 +1,331 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useCallback } from "react"
 import {
-  Users, Search, Eye, Phone, Mail, MessageSquare, ExternalLink,
-  CheckCircle2, Clock, Brain, Target, Award, Briefcase, GraduationCap,
-  Globe, MapPin, Send, X, ChevronRight, Sparkles, AlertCircle,
-  FileText, Star, Building2, ArrowRight
+  Users, Search, Eye, X, Loader2, Inbox, Brain, Target, Briefcase,
+  GraduationCap, MapPin, Mail, Phone, FileText, Send, Award
 } from "lucide-react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { Separator } from "@/components/ui/separator"
+import { Progress } from "@/components/ui/progress"
+import { useStore } from "@/store/useStore"
 
-const candidates = [
-  {
-    id: "1", name: "María García", email: "maria@email.com", phone: "+57 310 123 4567", whatsapp: "+573101234567",
-    location: "Bogotá, Colombia", country: "Colombia", workType: "Remoto",
-    age: 28, education: "Ingeniería de Sistemas", university: "Universidad Nacional",
-    experience: "5 años", languages: ["Español", "Inglés", "Portugués"],
-    skills: ["React", "TypeScript", "Node.js", "Python", "AWS", "Docker", "PostgreSQL", "GraphQL", "Next.js", "Tailwind", "Git", "CI/CD"],
-    assessments: { cognitive: 92, psychometric: 87, behavioral: 85, technical: 88 },
-    overallScore: 89, profileCompletion: 85,
-    matches: 8, referredTo: 2, status: "disponible",
-    registeredAt: "2026-06-15", lastActive: "Hace 2 horas",
-    bio: "Desarrolladora Full Stack con 5 años de experiencia en startups de tecnología. Apasionada por crear productos escalables.",
-  },
-  {
-    id: "2", name: "Carlos Ruiz", email: "carlos@email.com", phone: "+52 55 987 6543", whatsapp: "+52559876543",
-    location: "Ciudad de México, México", country: "México", workType: "Híbrido",
-    age: 32, education: "Maestría en Ciencia de Datos", university: "Tec de Monterrey",
-    experience: "8 años", languages: ["Español", "Inglés"],
-    skills: ["Python", "Machine Learning", "TensorFlow", "SQL", "Pandas", "Spark", "Tableau", "Power BI", "Azure", "R"],
-    assessments: { cognitive: 88, psychometric: 91, behavioral: 82, technical: 90 },
-    overallScore: 88, profileCompletion: 92,
-    matches: 5, referredTo: 1, status: "en_proceso",
-    registeredAt: "2026-07-01", lastActive: "Ayer",
-    bio: "Científico de datos con experiencia en modelos de ML para fintech. Buscando liderar equipo de datos.",
-  },
-  {
-    id: "3", name: "Ana Martínez", email: "ana@email.com", phone: "+34 612 345 678", whatsapp: "+34612345678",
-    location: "Madrid, España", country: "España", workType: "Remoto",
-    age: 26, education: "Diseño UX/UI", university: "IED Madrid",
-    experience: "3 años", languages: ["Español", "Inglés", "Francés"],
-    skills: ["Figma", "Sketch", "Adobe XD", "Prototyping", "User Research", "HTML/CSS", "JavaScript", "React"],
-    assessments: { cognitive: 85, psychometric: 89, behavioral: 90, technical: 82 },
-    overallScore: 87, profileCompletion: 78,
-    matches: 6, referredTo: 0, status: "disponible",
-    registeredAt: "2026-07-15", lastActive: "Hace 5 horas",
-    bio: "Diseñadora UX/UI especializada en productos SaaS. Enfoque en accesibilidad y design systems.",
-  },
-  {
-    id: "4", name: "Pedro Sánchez", email: "pedro@email.com", phone: "+56 9 8765 4321", whatsapp: "+56987654321",
-    location: "Santiago, Chile", country: "Chile", workType: "Presencial",
-    age: 35, education: "Ingeniería Civil Industrial", university: "PUC Chile",
-    experience: "10 años", languages: ["Español", "Inglés"],
-    skills: ["Gestión de Proyectos", "Scrum", "PMP", "Excel avanzado", "Power BI", "Lean Six Sigma", "Liderazgo"],
-    assessments: { cognitive: 80, psychometric: 93, behavioral: 91, technical: 78 },
-    overallScore: 86, profileCompletion: 95,
-    matches: 4, referredTo: 1, status: "contratado",
-    registeredAt: "2026-06-01", lastActive: "Hace 3 días",
-    bio: "Project Manager certificado PMP con 10 años liderando equipos de hasta 25 personas en retail y logística.",
-  },
-  {
-    id: "5", name: "Laura López", email: "laura@email.com", phone: "+54 11 5555 1234", whatsapp: "+541155551234",
-    location: "Buenos Aires, Argentina", country: "Argentina", workType: "Remoto",
-    age: 24, education: "Lic. en Marketing Digital", university: "UBA",
-    experience: "2 años", languages: ["Español", "Inglés", "Italiano"],
-    skills: ["SEO", "Google Ads", "Meta Ads", "Analytics", "HubSpot", "Copywriting", "Social Media", "Email Marketing"],
-    assessments: { cognitive: 78, psychometric: 85, behavioral: 88, technical: 75 },
-    overallScore: 82, profileCompletion: 70,
-    matches: 3, referredTo: 0, status: "disponible",
-    registeredAt: "2026-08-01", lastActive: "Hace 1 semana",
-    bio: "Especialista en marketing digital con enfoque en growth hacking y automatización.",
-  },
-]
+interface CandidateRow {
+  id: string
+  userId: string
+  name: string
+  email: string
+  phone: string | null
+  location: string | null
+  skills: string[]
+  allSkillsCount: number
+  bio: string | null
+  cvFileName: string | null
+  education: { degree: string; field: string; institution: string }[]
+  experience: { position: string; company: string; current: boolean }[]
+  yearsExperience: number
+  assessmentsCompleted: number
+  assessmentsTotal: number
+  scoresByCategory: Record<string, number>
+  avgScore: number | null
+  matches: number
+  referrals: number
+  derived: boolean
+  profileCompletion: number
+  registeredAt: string
+}
 
-const companies = [
-  { id: "1", name: "TechCorp Solutions" },
-  { id: "2", name: "InnovateLab" },
-  { id: "3", name: "DataPro Analytics" },
-  { id: "4", name: "GlobalTech Corp" },
-  { id: "5", name: "StartupXYZ" },
-]
+interface CompanyOption {
+  id: string
+  name: string
+}
+
+const CATEGORY_LABELS: Record<string, { label: string; color: string }> = {
+  COGNITIVE: { label: "Cognitiva", color: "text-blue-600" },
+  PSYCHOMETRIC: { label: "Psicométrica", color: "text-purple-600" },
+  BEHAVIORAL: { label: "Comportamental", color: "text-emerald-600" },
+  TECHNICAL: { label: "Técnica", color: "text-orange-600" },
+}
 
 export default function AdminCandidatesPage() {
-  const [searchQuery, setSearchQuery] = useState("")
-  const [selectedCandidate, setSelectedCandidate] = useState<typeof candidates[0] | null>(null)
-  const [showReferralModal, setShowReferralModal] = useState(false)
-  const [showMessageModal, setShowMessageModal] = useState(false)
-  const [messageText, setMessageText] = useState("")
-  const [referralCompany, setReferralCompany] = useState("")
+  const { user } = useStore()
+  const [search, setSearch] = useState("")
+  const [loading, setLoading] = useState(true)
+  const [candidates, setCandidates] = useState<CandidateRow[]>([])
+  const [selected, setSelected] = useState<CandidateRow | null>(null)
+  const [companies, setCompanies] = useState<CompanyOption[]>([])
+  const [referring, setReferring] = useState(false)
+  const [referralMsg, setReferralMsg] = useState<string | null>(null)
 
-  const filtered = candidates.filter(c =>
-    c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    c.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    c.skills.some(s => s.toLowerCase().includes(searchQuery.toLowerCase()))
-  )
+  const load = useCallback((q?: string) => {
+    setLoading(true)
+    fetch(`/api/admin/candidates${q ? `?search=${encodeURIComponent(q)}` : ""}`)
+      .then(r => r.json())
+      .then(data => { if (data.success) setCandidates(data.candidates) })
+      .finally(() => setLoading(false))
+  }, [])
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "disponible": return <Badge className="bg-emerald-100 text-emerald-700">Disponible</Badge>
-      case "en_proceso": return <Badge className="bg-amber-100 text-amber-700">En Proceso</Badge>
-      case "contratado": return <Badge className="bg-blue-100 text-blue-700">Contratado</Badge>
-      default: return <Badge variant="outline">{status}</Badge>
+  useEffect(() => { load() }, [load])
+
+  useEffect(() => {
+    const t = setTimeout(() => load(search || undefined), search ? 400 : 0)
+    return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search])
+
+  // Al abrir el detalle: cargar empresas activas para derivar
+  async function openDetail(c: CandidateRow) {
+    setSelected(c)
+    setReferralMsg(null)
+    if (companies.length === 0) {
+      const res = await fetch("/api/admin/companies")
+      const data = await res.json()
+      if (data.success) setCompanies(data.companies)
+    }
+  }
+
+  async function deriveToCompany(companyId: string, companyName: string) {
+    if (!selected) return
+    if (selected.matches === 0) {
+      setReferralMsg("Este candidato aún no tiene matches con evaluaciones. Debe completar evaluaciones primero.")
+      return
+    }
+    setReferring(true)
+    setReferralMsg(null)
+    try {
+      const res = await fetch("/api/admin/derive", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ candidateId: selected.id, companyId }),
+      })
+      const data = await res.json()
+      setReferralMsg(data.success
+        ? `✅ Candidato derivado a ${companyName} (${data.created} vacante${data.created !== 1 ? "s" : ""} compatible${data.created !== 1 ? "s" : ""})`
+        : data.error || "No se pudo derivar")
+      if (data.success) load(search || undefined)
+    } catch {
+      setReferralMsg("Error de conexión al derivar")
+    } finally {
+      setReferring(false)
     }
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Users className="h-7 w-7 text-fb-blue" />
+          <h1 className="text-3xl font-bold flex items-center gap-2">
+            <Users className="h-8 w-8 text-primary" />
             Candidatos
           </h1>
-          <p className="text-muted-foreground mt-1">Gestión de todos los candidatos registrados.</p>
+          <p className="text-muted-foreground mt-1">Todos los candidatos registrados con su progreso real.</p>
         </div>
-        <div className="relative w-full sm:w-80">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Buscar por nombre, email o skill..." className="pl-10" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
-        </div>
+        <Badge variant="info" className="px-3 py-1 text-sm w-fit">
+          {candidates.length} candidato{candidates.length !== 1 ? "s" : ""}
+        </Badge>
       </div>
 
-      {/* Candidate List */}
-      <div className="space-y-3">
-        {filtered.map((c) => (
-          <Card key={c.id} className="hover:shadow-md transition-all duration-200">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-fb-blue to-fb-purple flex items-center justify-center text-white font-medium shrink-0">
-                  {c.name.split(" ").map(n => n[0]).join("")}
+      <div className="relative max-w-md">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input placeholder="Buscar por nombre..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10" />
+      </div>
+
+      {loading ? (
+        <div className="flex items-center justify-center h-40"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+      ) : candidates.length === 0 ? (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <Inbox className="h-12 w-12 mx-auto mb-3 text-muted-foreground/50" />
+            <p className="text-muted-foreground">
+              {search ? "No se encontraron candidatos con esa búsqueda." : "Aún no hay candidatos registrados en la plataforma."}
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-4">
+          {candidates.map((c) => (
+            <Card key={c.id} className="hover:shadow-md transition-all duration-200">
+              <CardContent className="p-6">
+                <div className="flex flex-col lg:flex-row lg:items-center gap-4">
+                  <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-fb-blue to-fb-purple flex items-center justify-center text-white font-bold text-lg shrink-0">
+                    {c.name.split(" ").map(n => n[0]).slice(0, 2).join("")}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="font-semibold">{c.name}</h3>
+                      {c.derived ? (
+                        <Badge className="bg-purple-100 text-purple-800">Derivado</Badge>
+                      ) : (
+                        <Badge className="bg-blue-100 text-blue-800">Disponible</Badge>
+                      )}
+                      {c.cvFileName && <Badge variant="outline" className="text-xs"><FileText className="h-3 w-3 mr-1" />CV</Badge>}
+                    </div>
+                    <div className="text-sm text-muted-foreground mt-0.5 flex items-center gap-2 flex-wrap">
+                      {c.location && <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{c.location}</span>}
+                      <span>{c.yearsExperience > 0 ? `${c.yearsExperience} años exp.` : "Sin experiencia registrada"}</span>
+                      <span>· {c.assessmentsCompleted}/{c.assessmentsTotal} evaluaciones</span>
+                    </div>
+                    <div className="flex gap-2 mt-2 flex-wrap">
+                      {c.skills.slice(0, 5).map((s, i) => (
+                        <Badge key={i} variant="outline" className="text-xs">{s}</Badge>
+                      ))}
+                      {c.allSkillsCount > 5 && <Badge variant="outline" className="text-xs">+{c.allSkillsCount - 5}</Badge>}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-6 shrink-0">
+                    <div className="text-center">
+                      <div className={`text-2xl font-bold ${c.avgScore != null ? "gradient-text" : "text-muted-foreground"}`}>
+                        {c.avgScore != null ? `${c.avgScore}%` : "—"}
+                      </div>
+                      <div className="text-xs text-muted-foreground">Score</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-xl font-bold text-primary">{c.matches}</div>
+                      <div className="text-xs text-muted-foreground">Matches</div>
+                    </div>
+                    <Button variant="ghost" size="icon" title="Ver perfil completo" onClick={() => openDetail(c)}>
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {/* Modal de detalle completo */}
+      {selected && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto" onClick={() => setSelected(null)}>
+          <Card className="w-full max-w-2xl my-8" onClick={e => e.stopPropagation()}>
+            <CardContent className="p-6 space-y-5 max-h-[85vh] overflow-y-auto">
+              {/* Header */}
+              <div className="flex items-start gap-4">
+                <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-fb-blue to-fb-purple flex items-center justify-center text-white font-bold text-xl shrink-0">
+                  {selected.name.split(" ").map(n => n[0]).slice(0, 2).join("")}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-semibold">{c.name}</span>
-                    {getStatusBadge(c.status)}
-                    <span className="text-xs text-muted-foreground">{c.lastActive}</span>
-                  </div>
-                  <div className="text-sm text-muted-foreground truncate">
-                    {c.email} · {c.location} · {c.workType}
-                  </div>
-                  <div className="flex flex-wrap gap-1 mt-1">
-                    {c.skills.slice(0, 5).map(s => (
-                      <Badge key={s} variant="outline" className="text-xs">{s}</Badge>
-                    ))}
-                    {c.skills.length > 5 && <Badge variant="outline" className="text-xs">+{c.skills.length - 5}</Badge>}
+                  <h3 className="font-semibold text-xl">{selected.name}</h3>
+                  <div className="text-sm text-muted-foreground flex flex-wrap gap-x-3 gap-y-1 mt-1">
+                    {selected.email && <span className="flex items-center gap-1"><Mail className="h-3 w-3" />{selected.email}</span>}
+                    {selected.phone && <span className="flex items-center gap-1"><Phone className="h-3 w-3" />{selected.phone}</span>}
+                    {selected.location && <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{selected.location}</span>}
                   </div>
                 </div>
-                <div className="flex gap-2 text-center text-sm shrink-0">
-                  <div className="w-14"><div className="font-bold text-fb-blue">{c.overallScore}%</div><div className="text-xs text-muted-foreground">Score</div></div>
-                  <div className="w-14"><div className="font-bold">{Object.keys(c.assessments).length}</div><div className="text-xs text-muted-foreground">Evals</div></div>
-                  <div className="w-14"><div className="font-bold text-emerald-600">{c.matches}</div><div className="text-xs text-muted-foreground">Matches</div></div>
-                </div>
-                <div className="flex gap-1 shrink-0">
-                  <Button variant="ghost" size="icon" className="h-9 w-9" title="Ver perfil completo" onClick={() => setSelectedCandidate(c)}>
-                    <Eye className="h-4 w-4 text-fb-blue" />
-                  </Button>
-                  <Button variant="ghost" size="icon" className="h-9 w-9" title="Enviar WhatsApp" onClick={() => window.open(`https://wa.me/${c.whatsapp}`, "_blank")}>
-                    <Phone className="h-4 w-4 text-emerald-600" />
-                  </Button>
-                  <Button variant="ghost" size="icon" className="h-9 w-9" title="Enviar mensaje" onClick={() => { setSelectedCandidate(c); setShowMessageModal(true) }}>
-                    <MessageSquare className="h-4 w-4 text-fb-purple" />
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {/* Candidate Detail Modal */}
-      {selectedCandidate && !showMessageModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setSelectedCandidate(null)}>
-          <div className="bg-background rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl" onClick={e => e.stopPropagation()}>
-            {/* Header */}
-            <div className="p-6 border-b bg-gradient-to-r from-fb-blue/5 to-fb-purple/5 rounded-t-2xl">
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-fb-blue to-fb-purple flex items-center justify-center text-white text-xl font-bold">
-                    {selectedCandidate.name.split(" ").map(n => n[0]).join("")}
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-bold">{selectedCandidate.name}</h2>
-                    <p className="text-muted-foreground">{selectedCandidate.email}</p>
-                    <div className="flex gap-2 mt-2">
-                      {getStatusBadge(selectedCandidate.status)}
-                      <Badge className="bg-fb-blue/10 text-fb-blue">{selectedCandidate.overallScore}% match</Badge>
-                    </div>
-                  </div>
-                </div>
-                <button onClick={() => setSelectedCandidate(null)} className="p-2 hover:bg-muted rounded-lg"><X className="h-5 w-5" /></button>
-              </div>
-            </div>
-
-            {/* Content */}
-            <div className="p-6 space-y-6">
-              {/* Bio */}
-              <p className="text-sm text-muted-foreground">{selectedCandidate.bio}</p>
-
-              {/* Info Grid */}
-              <div className="grid grid-cols-2 gap-3">
-                {[
-                  { icon: MapPin, label: "Ubicación", value: selectedCandidate.location },
-                  { icon: Globe, label: "Trabajo", value: selectedCandidate.workType },
-                  { icon: GraduationCap, label: "Educación", value: `${selectedCandidate.education} - ${selectedCandidate.university}` },
-                  { icon: Briefcase, label: "Experiencia", value: selectedCandidate.experience },
-                  { icon: Globe, label: "Idiomas", value: selectedCandidate.languages.join(", ") },
-                  { icon: Clock, label: "Última conexión", value: selectedCandidate.lastActive },
-                ].map((item, i) => (
-                  <div key={i} className="flex items-start gap-2 p-2 rounded-lg bg-muted/30">
-                    <item.icon className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
-                    <div>
-                      <div className="text-xs text-muted-foreground">{item.label}</div>
-                      <div className="text-sm font-medium">{item.value}</div>
-                    </div>
-                  </div>
-                ))}
+                <Button variant="ghost" size="icon" onClick={() => setSelected(null)}><X className="h-4 w-4" /></Button>
               </div>
 
-              {/* Evaluations */}
+              {/* Scores */}
               <div>
-                <h3 className="font-semibold mb-3 flex items-center gap-2"><Brain className="h-4 w-4" /> Evaluaciones</h3>
-                <div className="grid grid-cols-2 gap-3">
-                  {Object.entries(selectedCandidate.assessments).map(([dim, score]) => (
-                    <div key={dim} className="p-3 rounded-xl bg-muted/30">
-                      <div className="flex justify-between mb-1">
-                        <span className="text-xs font-medium capitalize">{dim === "cognitive" ? "Cognitiva" : dim === "psychometric" ? "Psicométrica" : dim === "behavioral" ? "Comportamental" : "Técnica"}</span>
-                        <span className="text-sm font-bold">{score}%</span>
+                <p className="text-sm font-medium mb-2 flex items-center gap-2"><Brain className="h-4 w-4" /> Evaluaciones ({selected.assessmentsCompleted}/{selected.assessmentsTotal})</p>
+                {Object.keys(selected.scoresByCategory).length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Aún no ha completado evaluaciones.</p>
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {Object.entries(selected.scoresByCategory).map(([cat, score]) => (
+                      <div key={cat} className="p-3 rounded-lg bg-muted/50">
+                        <div className={`text-lg font-bold ${CATEGORY_LABELS[cat.toUpperCase()]?.color || ""}`}>
+                          {score}%
+                        </div>
+                        <div className="text-xs text-muted-foreground">{CATEGORY_LABELS[cat.toUpperCase()]?.label || cat}</div>
+                        <Progress value={score} className="h-1.5 mt-1" />
                       </div>
-                      <div className="w-full bg-muted rounded-full h-2">
-                        <div className="h-2 rounded-full bg-fb-blue" style={{ width: `${score}%` }} />
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </div>
+
+              {/* Bio */}
+              {selected.bio && (
+                <div>
+                  <p className="text-sm font-medium mb-1">Sobre el candidato</p>
+                  <p className="text-sm text-muted-foreground">{selected.bio}</p>
+                </div>
+              )}
 
               {/* Skills */}
               <div>
-                <h3 className="font-semibold mb-3 flex items-center gap-2"><Star className="h-4 w-4" /> Skills</h3>
-                <div className="flex flex-wrap gap-2">
-                  {selectedCandidate.skills.map(s => (
-                    <Badge key={s} variant="outline">{s}</Badge>
-                  ))}
+                <p className="text-sm font-medium mb-2">Habilidades ({selected.allSkillsCount})</p>
+                <div className="flex gap-2 flex-wrap">
+                  {selected.skills.length > 0 ? selected.skills.map((s, i) => (
+                    <Badge key={i} variant="outline">{s}</Badge>
+                  )) : <span className="text-sm text-muted-foreground">Sin skills registradas</span>}
                 </div>
               </div>
 
-              <Separator />
-
-              {/* Actions */}
-              <div className="flex flex-wrap gap-2">
-                <Button variant="fb" onClick={() => setShowReferralModal(true)}>
-                  <Building2 className="h-4 w-4 mr-2" />
-                  Derivar a Empresa
-                </Button>
-                <Button variant="fb-outline" onClick={() => window.open(`https://wa.me/${selectedCandidate.whatsapp}`, "_blank")}>
-                  <Phone className="h-4 w-4 mr-2" />
-                  WhatsApp
-                </Button>
-                <Button variant="fb-outline" onClick={() => setShowMessageModal(true)}>
-                  <MessageSquare className="h-4 w-4 mr-2" />
-                  Mensaje
-                </Button>
-                <Button variant="fb-outline">
-                  <FileText className="h-4 w-4 mr-2" />
-                  Ver CV
-                </Button>
+              {/* Educación y experiencia */}
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm font-medium mb-2 flex items-center gap-2"><GraduationCap className="h-4 w-4" /> Educación</p>
+                  {selected.education.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">Sin registrar</p>
+                  ) : (
+                    selected.education.map((e, i) => (
+                      <div key={i} className="text-sm text-muted-foreground mb-1">
+                        <span className="text-foreground font-medium">{e.degree}</span> · {e.institution}
+                      </div>
+                    ))
+                  )}
+                </div>
+                <div>
+                  <p className="text-sm font-medium mb-2 flex items-center gap-2"><Briefcase className="h-4 w-4" /> Experiencia</p>
+                  {selected.experience.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">Sin registrar</p>
+                  ) : (
+                    selected.experience.map((e, i) => (
+                      <div key={i} className="text-sm text-muted-foreground mb-1">
+                        <span className="text-foreground font-medium">{e.position}</span> · {e.company}{e.current ? " (actual)" : ""}
+                      </div>
+                    ))
+                  )}
+                </div>
               </div>
-            </div>
-          </div>
-        </div>
-      )}
 
-      {/* Referral Modal */}
-      {showReferralModal && selectedCandidate && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowReferralModal(false)}>
-          <div className="bg-background rounded-2xl max-w-md w-full shadow-2xl p-6" onClick={e => e.stopPropagation()}>
-            <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-              <Building2 className="h-5 w-5 text-fb-blue" />
-              Derivar a Empresa
-            </h3>
-            <p className="text-sm text-muted-foreground mb-4">
-              Selecciona la empresa para derivar a <strong>{selectedCandidate.name}</strong>
-            </p>
-            <div className="space-y-2 mb-4">
-              {companies.map(co => (
-                <button key={co.id} onClick={() => setReferralCompany(co.name)}
-                  className={`w-full text-left p-3 rounded-xl border-2 transition-all ${
-                    referralCompany === co.name ? "border-fb-blue bg-fb-blue/5" : "border-border hover:border-fb-blue/30"
-                  }`}>
-                  <span className="font-medium text-sm">{co.name}</span>
-                </button>
-              ))}
-            </div>
-            <div className="flex gap-2">
-              <Button variant="outline" className="flex-1" onClick={() => setShowReferralModal(false)}>Cancelar</Button>
-              <Button variant="fb" className="flex-1" disabled={!referralCompany} onClick={() => { setShowReferralModal(false); setSelectedCandidate(null) }}>
-                <Send className="h-4 w-4 mr-2" />
-                Derivar
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+              {/* CV */}
+              {selected.cvFileName && (
+                <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50">
+                  <FileText className="h-5 w-5 text-fb-blue" />
+                  <span className="text-sm font-medium flex-1 truncate">{selected.cvFileName}</span>
+                  <a href={`/api/candidate/cv?userId=${selected.userId}&download=1`} download>
+                    <Button variant="outline" size="sm">Descargar CV</Button>
+                  </a>
+                </div>
+              )}
 
-      {/* Message Modal */}
-      {showMessageModal && selectedCandidate && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowMessageModal(false)}>
-          <div className="bg-background rounded-2xl max-w-md w-full shadow-2xl p-6" onClick={e => e.stopPropagation()}>
-            <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-              <MessageSquare className="h-5 w-5 text-fb-purple" />
-              Mensaje a {selectedCandidate.name}
-            </h3>
-            <div className="flex items-center gap-2 p-3 rounded-xl bg-muted/50 mb-4">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-fb-blue to-fb-purple flex items-center justify-center text-white text-xs font-bold">
-                {selectedCandidate.name.split(" ").map(n => n[0]).join("")}
+              {/* Referido/derivar */}
+              <div className="border-t pt-4 space-y-3">
+                <p className="text-sm font-medium flex items-center gap-2"><Send className="h-4 w-4" /> Estado de derivación</p>
+                {referralMsg && <p className="text-sm p-3 rounded-lg bg-muted">{referralMsg}</p>}
+                {selected.derived ? (
+                  <p className="text-sm text-muted-foreground">
+                    Este candidato ya fue derivado a {selected.referrals} empresa{selected.referrals !== 1 ? "s" : ""}.
+                  </p>
+                ) : companies.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No hay empresas registradas todavía para derivar.</p>
+                ) : (
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-2">Derivar a una empresa (enviará sus matches compatibles):</p>
+                    <div className="flex gap-2 flex-wrap">
+                      {companies.map((comp) => (
+                        <Button
+                          key={comp.id}
+                          variant="fb-outline"
+                          size="sm"
+                          disabled={referring}
+                          onClick={() => deriveToCompany(comp.id, comp.name)}
+                        >
+                          {referring ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Send className="h-3 w-3 mr-1" />}
+                          {comp.name}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
-              <div>
-                <div className="text-sm font-medium">{selectedCandidate.name}</div>
-                <div className="text-xs text-muted-foreground">{selectedCandidate.email}</div>
-              </div>
-            </div>
-            <Textarea
-              placeholder="Escribe tu mensaje..."
-              className="min-h-[120px] mb-4"
-              value={messageText}
-              onChange={e => setMessageText(e.target.value)}
-            />
-            <div className="flex gap-2">
-              <Button variant="outline" className="flex-1" onClick={() => setShowMessageModal(false)}>Cancelar</Button>
-              <Button variant="fb" className="flex-1" disabled={!messageText} onClick={() => { setShowMessageModal(false); setMessageText(""); setSelectedCandidate(null) }}>
-                <Send className="h-4 w-4 mr-2" />
-                Enviar
-              </Button>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         </div>
       )}
     </div>

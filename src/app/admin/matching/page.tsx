@@ -1,25 +1,48 @@
 "use client"
 
-import { Target, TrendingUp, Brain, AlertTriangle } from "lucide-react"
+import { useState, useEffect } from "react"
+import { Target, TrendingUp, Brain, Loader2, Inbox } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Progress } from "@/components/ui/progress"
 
-const recentMatches = [
-  { candidate: "María García", company: "TechCorp Solutions", vacancy: "Senior Developer", score: 95, recommendation: "Altamente Recomendado", timestamp: "Hace 2h" },
-  { candidate: "Carlos Ruiz", company: "InnovateLab", vacancy: "Product Manager", score: 88, recommendation: "Recomendado", timestamp: "Hace 5h" },
-  { candidate: "Ana Martínez", company: "DataPro", vacancy: "UX Designer", score: 82, recommendation: "Recomendado", timestamp: "Hace 8h" },
-  { candidate: "Pedro Sánchez", company: "TechCorp Solutions", vacancy: "DevOps Engineer", score: 78, recommendation: "Posible", timestamp: "Hace 1d" },
-]
-
-const modelMetrics = [
-  { label: "Precisión del Modelo", value: "94.2%", change: "+2.1%", trend: "up" },
-  { label: "Tasa de Contratación", value: "34%", change: "+5%", trend: "up" },
-  { label: "Satisfacción con Matches", value: "4.6/5", change: "+0.2", trend: "up" },
-  { label: "Matches Descartados", value: "8%", change: "-3%", trend: "up" },
-]
+interface MatchRow {
+  id: string
+  candidate: string
+  company: string
+  vacancy: string
+  score: number
+  recommendation: string
+  createdAt: string
+}
 
 export default function AdminMatchingPage() {
+  const [loading, setLoading] = useState(true)
+  const [matches, setMatches] = useState<MatchRow[]>([])
+  const [metrics, setMetrics] = useState({ totalMatches: 0, highMatches: 0, avgScore: 0, highRate: 0 })
+
+  useEffect(() => {
+    fetch("/api/admin/matches")
+      .then(r => r.json())
+      .then(data => {
+        if (data.success) {
+          setMatches(data.matches)
+          setMetrics(data.metrics)
+        }
+      })
+      .finally(() => setLoading(false))
+  }, [])
+
+  if (loading) {
+    return <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+  }
+
+  const modelMetrics = [
+    { label: "Matches Generados", value: metrics.totalMatches.toString(), badge: "total" },
+    { label: "Alta Compatibilidad (≥85%)", value: metrics.highMatches.toString(), badge: "high" },
+    { label: "Score Promedio", value: `${metrics.avgScore}%`, badge: "avg" },
+    { label: "Tasa de Alta Compatibilidad", value: `${metrics.highRate}%`, badge: "rate" },
+  ]
+
   return (
     <div className="space-y-6">
       <div>
@@ -27,7 +50,7 @@ export default function AdminMatchingPage() {
           <Target className="h-8 w-8 text-primary" />
           Matching
         </h1>
-        <p className="text-muted-foreground mt-1">Supervisión del algoritmo de matching y su rendimiento.</p>
+        <p className="text-muted-foreground mt-1">Supervisión del algoritmo de matching y su rendimiento real.</p>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -36,7 +59,6 @@ export default function AdminMatchingPage() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <TrendingUp className="h-5 w-5 text-emerald-500" />
-                <Badge variant="success" className="text-xs">{metric.change}</Badge>
               </div>
               <div className="text-2xl font-bold">{metric.value}</div>
               <div className="text-sm text-muted-foreground">{metric.label}</div>
@@ -45,15 +67,19 @@ export default function AdminMatchingPage() {
         ))}
       </div>
 
-      {/* AI Model Status */}
+      {/* Estado del modelo (basado en actividad real) */}
       <Card className="border-2 border-fb-purple/20 bg-gradient-to-r from-fb-purple/5 to-fb-blue/5">
         <CardContent className="p-6 flex flex-col md:flex-row md:items-center gap-4">
-          <div className="w-12 h-12 rounded-xl gradient-bg flex items-center justify-center">
+          <div className="w-12 h-12 rounded-xl gradient-bg flex items-center justify-center shrink-0">
             <Brain className="h-6 w-6 text-white" />
           </div>
           <div className="flex-1">
-            <h3 className="font-semibold">Modelo de IA Activo — v2.4</h3>
-            <p className="text-sm text-muted-foreground">Último entrenamiento: 1 Sep 2026 · Próximo: 1 Oct 2026</p>
+            <h3 className="font-semibold">Motor de Matching Bidireccional</h3>
+            <p className="text-sm text-muted-foreground">
+              {metrics.totalMatches > 0
+                ? `Activo · ha generado ${metrics.totalMatches} matches con score promedio de ${metrics.avgScore}%. Cada evaluación completada regenera los matches del candidato.`
+                : "Activo y a la espera de datos. Generará matches automáticamente cuando haya candidatos con evaluaciones y vacantes activas."}
+            </p>
           </div>
           <Badge variant="success">Activo</Badge>
         </CardContent>
@@ -62,26 +88,37 @@ export default function AdminMatchingPage() {
       <Card>
         <CardHeader>
           <CardTitle>Últimos Matches Generados</CardTitle>
-          <CardDescription>Matches creados por el algoritmo en las últimas 24h</CardDescription>
+          <CardDescription>Matches creados por el algoritmo, del más reciente al más antiguo</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {recentMatches.map((match, i) => (
-              <div key={i} className="flex items-center gap-4 p-4 rounded-xl bg-muted/50 hover:bg-muted transition-colors">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-fb-blue to-fb-purple flex items-center justify-center text-white text-sm font-medium">
-                  {match.candidate.split(" ").map(n => n[0]).join("")}
+          {matches.length === 0 ? (
+            <div className="text-center py-10">
+              <Inbox className="h-10 w-10 mx-auto mb-3 text-muted-foreground/40" />
+              <p className="text-muted-foreground">
+                Aún no hay matches. Aparecerán automáticamente cuando candidatos completen evaluaciones y haya vacantes activas.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {matches.map((match) => (
+                <div key={match.id} className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 rounded-xl bg-muted/50">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-fb-blue to-fb-purple flex items-center justify-center text-white text-sm font-medium shrink-0">
+                    {match.candidate.split(" ").map(n => n[0]).slice(0, 2).join("")}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium truncate">{match.candidate} → {match.company}</div>
+                    <div className="text-sm text-muted-foreground truncate">
+                      {match.vacancy} · {new Date(match.createdAt).toLocaleDateString("es-ES", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                    </div>
+                  </div>
+                  <div className="sm:text-right">
+                    <div className="text-xl font-bold gradient-text">{match.score}%</div>
+                    <div className="text-xs text-muted-foreground">{match.recommendation}</div>
+                  </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <div className="font-medium">{match.candidate} → {match.company}</div>
-                  <div className="text-sm text-muted-foreground">{match.vacancy} · {match.timestamp}</div>
-                </div>
-                <div className="text-right">
-                  <div className="text-xl font-bold gradient-text">{match.score}%</div>
-                  <div className="text-xs text-muted-foreground">{match.recommendation}</div>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

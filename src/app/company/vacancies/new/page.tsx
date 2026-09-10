@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import {
   Briefcase, ArrowRight, ArrowLeft, CheckCircle2, MapPin,
-  DollarSign, Clock, Users, Brain, Target, Plus, X, Sparkles
+  DollarSign, Clock, Users, Brain, Target, Plus, X, Sparkles, Loader2, AlertCircle
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Progress } from "@/components/ui/progress"
 import { Separator } from "@/components/ui/separator"
+import { useStore } from "@/store/useStore"
 
 const steps = [
   { id: 1, title: "Información Básica", icon: Briefcase },
@@ -47,7 +48,10 @@ const languages = [
 
 export default function NewVacancyPage() {
   const router = useRouter()
+  const { user } = useStore()
   const [currentStep, setCurrentStep] = useState(1)
+  const [publishing, setPublishing] = useState(false)
+  const [publishError, setPublishError] = useState<string | null>(null)
 
   // Form data
   const [formData, setFormData] = useState({
@@ -120,15 +124,71 @@ export default function NewVacancyPage() {
     })
   }
 
-  const handlePublish = () => {
-    // In real app, this would call an API
-    router.push("/company/vacancies")
+  const handlePublish = async () => {
+    if (!user?.id) {
+      setPublishError("Debes iniciar sesión para publicar.")
+      return
+    }
+    if (!formData.title.trim() || !formData.description.trim() || !formData.category || !formData.location.trim()) {
+      setPublishError("Completa los campos obligatorios: título, descripción, categoría y ubicación.")
+      setCurrentStep(1)
+      return
+    }
+    setPublishing(true)
+    setPublishError(null)
+    try {
+      const res = await fetch("/api/company/vacancies", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: user.id,
+          title: formData.title,
+          description: formData.description,
+          category: formData.category,
+          requirements: formData.requirements,
+          salaryMin: formData.salaryMin || null,
+          salaryMax: formData.salaryMax || null,
+          salaryCurrency: formData.salaryCurrency,
+          location: formData.location,
+          locationType: formData.locationType,
+          hybridDays: formData.hybridDays,
+          ageMin: formData.ageMin,
+          ageMax: formData.ageMax,
+          gender: formData.gender,
+          educationLevel: formData.educationLevel,
+          experienceLevel: formData.experienceLevel,
+          requiredLanguages: formData.requiredLanguages,
+          criminalRecord: formData.criminalRecord,
+          drugTest: formData.drugTest,
+          validDriverLicense: formData.validDriverLicense,
+          willingToRelocate: formData.willingToRelocate,
+          availableForTravel: formData.availableForTravel,
+          assessmentWeights: formData.assessmentWeights,
+        }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        router.push("/company/vacancies?published=1")
+      } else {
+        setPublishError(data.error || "No se pudo publicar la vacante")
+        setPublishing(false)
+      }
+    } catch {
+      setPublishError("Error de conexión al publicar la vacante")
+      setPublishing(false)
+    }
   }
 
   const progress = (currentStep / steps.length) * 100
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
+      {publishError && (
+        <div className="flex items-center gap-2 p-4 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
+          <AlertCircle className="h-4 w-4 shrink-0" />
+          {publishError}
+        </div>
+      )}
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -631,9 +691,13 @@ export default function NewVacancyPage() {
             <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
         ) : (
-          <Button variant="fb" onClick={handlePublish}>
-            <CheckCircle2 className="mr-2 h-4 w-4" />
-            Publicar Vacante
+          <Button variant="fb" onClick={handlePublish} disabled={publishing}>
+            {publishing ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <CheckCircle2 className="mr-2 h-4 w-4" />
+            )}
+            {publishing ? "Publicando..." : "Publicar Vacante"}
           </Button>
         )}
       </div>
