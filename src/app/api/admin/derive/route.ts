@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { requireRole } from '@/lib/auth'
 
-// POST /api/admin/derive — deriva un candidato a una empresa
+// POST /api/admin/derive — deriva un candidato a una empresa (solo ADMIN)
 // Crea un Referral por cada match compatible con las vacantes ACTIVAS de esa empresa
 export async function POST(request: NextRequest) {
   try {
+    const auth = await requireRole(request, 'ADMIN')
+    if ('error' in auth) return auth.error
     const body = await request.json()
     const { candidateId, companyId } = body as { candidateId: string; companyId: string }
 

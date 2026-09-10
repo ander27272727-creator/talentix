@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { requireRole } from '@/lib/auth'
 
 interface ScreeningConfig {
   ageMin: number
@@ -23,9 +24,11 @@ interface VacancyConfig {
   screening?: ScreeningConfig
 }
 
-// GET /api/company/vacancies?userId=... — vacantes reales de la empresa
+// GET /api/company/vacancies?userId=... — vacantes reales de la empresa (solo COMPANY)
 export async function GET(request: NextRequest) {
   try {
+    const auth = await requireRole(request, 'COMPANY', 'ADMIN')
+    if ('error' in auth) return auth.error
     const { searchParams } = new URL(request.url)
     const userId = searchParams.get('userId')
 
@@ -74,9 +77,11 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// PATCH /api/company/vacancies — pausar/activar/cerrar una vacante
+// PATCH /api/company/vacancies — pausar/activar/cerrar una vacante (solo COMPANY)
 export async function PATCH(request: NextRequest) {
   try {
+    const auth = await requireRole(request, 'COMPANY', 'ADMIN')
+    if ('error' in auth) return auth.error
     const body = await request.json()
     const { userId, vacancyId, status } = body as { userId: string; vacancyId: string; status: string }
 
@@ -105,8 +110,11 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ success: false, error: 'Error interno' }, { status: 500 })
   }
 }
+// POST /api/company/vacancies — publica una vacante real (solo COMPANY)
 export async function POST(request: NextRequest) {
   try {
+    const auth = await requireRole(request, 'COMPANY')
+    if ('error' in auth) return auth.error
     const body = await request.json()
     const { userId, title, description, category, requirements, salaryMin, salaryMax, salaryCurrency, location, locationType, hybridDays, ageMin, ageMax, gender, educationLevel, experienceLevel, requiredLanguages, criminalRecord, drugTest, validDriverLicense, willingToRelocate, availableForTravel, assessmentWeights } = body
 

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { Target, TrendingUp, Brain, Loader2, Inbox } from "lucide-react"
+import { apiFetch } from "@/lib/api"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 
@@ -21,7 +22,7 @@ export default function AdminMatchingPage() {
   const [metrics, setMetrics] = useState({ totalMatches: 0, highMatches: 0, avgScore: 0, highRate: 0 })
 
   useEffect(() => {
-    fetch("/api/admin/matches")
+    apiFetch("/api/admin/matches")
       .then(r => r.json())
       .then(data => {
         if (data.success) {

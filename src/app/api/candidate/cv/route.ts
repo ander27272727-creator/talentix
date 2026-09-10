@@ -1,12 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { requireRole } from '@/lib/auth'
 
 const MAX_SIZE = 2.5 * 1024 * 1024 // 2.5 MB
 
-// GET /api/candidate/cv?userId=...            -> metadatos del CV
+// GET /api/candidate/cv?userId=...            -> metadatos del CV (dueño o ADMIN)
 // GET /api/candidate/cv?userId=...&download=1 -> descarga el archivo
 export async function GET(request: NextRequest) {
   try {
+    const auth = await requireRole(request, 'CANDIDATE', 'COMPANY', 'ADMIN')
+    if ('error' in auth) return auth.error
+    // Solo el dueño o un ADMIN pueden acceder
+    const targetUserId = new URL(request.url).searchParams.get('userId')
+    if (auth.user.role !== 'ADMIN' && auth.user.id !== targetUserId) {
+      return NextResponse.json({ success: false, error: 'No autorizado' }, { status: 403 })
+    }
     const { searchParams } = new URL(request.url)
     const userId = searchParams.get('userId')
     const download = searchParams.get('download')
@@ -57,9 +65,11 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/candidate/cv — sube o reemplaza el CV
+// POST /api/candidate/cv — sube o reemplaza el CV (solo el dueño)
 export async function POST(request: NextRequest) {
   try {
+    const auth = await requireRole(request, 'CANDIDATE')
+    if ('error' in auth) return auth.error
     const body = await request.json()
     const { userId, fileName, fileSize, fileData } = body as {
       userId: string
@@ -98,9 +108,11 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// DELETE /api/candidate/cv — elimina el CV
+// DELETE /api/candidate/cv — elimina el CV (solo el dueño)
 export async function DELETE(request: NextRequest) {
   try {
+    const auth = await requireRole(request, 'CANDIDATE')
+    if ('error' in auth) return auth.error
     const body = await request.json()
     const { userId } = body as { userId: string }
 

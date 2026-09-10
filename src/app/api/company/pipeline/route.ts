@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { requireRole } from '@/lib/auth'
 
-// GET /api/company/pipeline?userId=... — funnel real de la empresa
+// GET /api/company/pipeline?userId=... — funnel real de la empresa (solo COMPANY)
 export async function GET(request: NextRequest) {
   try {
+    const auth = await requireRole(request, 'COMPANY', 'ADMIN')
+    if ('error' in auth) return auth.error
     const { searchParams } = new URL(request.url)
     const userId = searchParams.get('userId')
     if (!userId) {

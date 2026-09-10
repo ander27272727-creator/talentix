@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Loader2 } from "lucide-react"
 import { useStore } from "@/store/useStore"
+import { apiFetch } from "@/lib/api"
 
 interface ReferralCandidate {
   id: string

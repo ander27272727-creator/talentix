@@ -25,6 +25,7 @@ const navigation = [
   { name: "Matching", href: "/admin/matching", icon: Target },
   { name: "Derivaciones", href: "/admin/referrals", icon: Zap },
   { name: "Analytics", href: "/admin/analytics", icon: BarChart3 },
+  { name: "Reporte Semanal", href: "/admin/weekly-report", icon: Calendar },
   { name: "Mensajes", href: "/admin/messages", icon: MessageSquare },
   { name: "Precios", href: "/admin/pricing", icon: DollarSign },
   { name: "divider", href: "#", icon: Zap },
@@ -48,13 +49,26 @@ export default function AdminLayout({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const router = useRouter()
   const pathname = usePathname()
-  const { user, logout, hasHydrated, unreadMessages } = useStore()
+  const { user, logout, hasHydrated, unreadMessages, setUnreadMessages } = useStore()
 
   useEffect(() => {
     if (hasHydrated && !user) {
       router.push("/login")
     }
   }, [user, router, hasHydrated])
+
+  // Badge real de mensajes no leídos
+  useEffect(() => {
+    if (!user) return
+    const load = () =>
+      fetch("/api/messages", { headers: { "x-user-id": user.id } })
+        .then(r => r.json())
+        .then(d => { if (d.success) setUnreadMessages(d.totalUnread) })
+        .catch(() => {})
+    load()
+    const t = setInterval(load, 15000)
+    return () => clearInterval(t)
+  }, [user, setUnreadMessages])
 
   if (!hasHydrated) {
     return (

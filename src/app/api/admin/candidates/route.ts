@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { requireRole } from '@/lib/auth'
 
-// GET /api/admin/candidates?search=... — candidatos reales con su progreso real
+// GET /api/admin/candidates?search=... — candidatos reales con su progreso real (solo ADMIN)
 export async function GET(request: NextRequest) {
   try {
+    const auth = await requireRole(request, 'ADMIN')
+    if ('error' in auth) return auth.error
     const { searchParams } = new URL(request.url)
     const search = searchParams.get('search')
 

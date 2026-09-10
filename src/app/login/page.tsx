@@ -36,7 +36,7 @@ export default function LoginPage() {
         router.push("/admin")
       }
     } catch {
-      setError("Credenciales inválidas. Intenta con: candidato@talentix.com, empresa@talentix.com, o admin@talentix.com")
+      setError("Credenciales inválidas. Verifica tu email y contraseña.")
     } finally {
       setIsLoading(false)
     }
@@ -143,20 +143,17 @@ export default function LoginPage() {
 
           <Separator className="my-8" />
 
-          {/* Demo Logins */}
+          {/* Atajos visuales (solo rellenan el email) */}
           <div>
             <p className="text-sm text-muted-foreground text-center mb-4">
-              Accesos de demostración
+              ¿Eres candidato, empresa o administrador?
             </p>
             <div className="grid grid-cols-3 gap-3">
               {demoLogins.map((demo) => (
                 <button
                   key={demo.role}
                   type="button"
-                  onClick={() => {
-                    setEmail(demo.email)
-                    setPassword("demo123")
-                  }}
+                  onClick={() => setEmail("")}
                   className="flex flex-col items-center gap-2 p-3 rounded-xl border hover:bg-muted transition-colors"
                 >
                   <div className={`w-10 h-10 rounded-lg ${demo.bg} flex items-center justify-center`}>

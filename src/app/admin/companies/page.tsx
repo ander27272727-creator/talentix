@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { Building2, Plus, Search, ExternalLink, Loader2, Inbox } from "lucide-react"
+import { apiFetch } from "@/lib/api"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -34,7 +35,7 @@ export default function AdminCompaniesPage() {
   const [companies, setCompanies] = useState<CompanyRow[]>([])
 
   useEffect(() => {
-    fetch("/api/admin/companies")
+    apiFetch("/api/admin/companies")
       .then(r => r.json())
       .then(data => { if (data.success) setCompanies(data.companies) })
       .finally(() => setLoading(false))

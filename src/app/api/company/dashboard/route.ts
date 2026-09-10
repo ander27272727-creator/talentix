@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { requireRole } from '@/lib/auth'
 
-// GET /api/company/dashboard?userId=... — datos reales del dashboard de empresa
+// GET /api/company/dashboard?userId=... — datos reales del dashboard de empresa (solo COMPANY)
 export async function GET(request: NextRequest) {
   try {
+    const auth = await requireRole(request, 'COMPANY', 'ADMIN')
+    if ('error' in auth) return auth.error
     const { searchParams } = new URL(request.url)
     const userId = searchParams.get('userId')
 

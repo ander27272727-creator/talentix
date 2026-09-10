@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Progress } from "@/components/ui/progress"
 import { useStore } from "@/store/useStore"
+import { apiFetch } from "@/lib/api"
 
 interface CandidateRow {
   id: string
@@ -80,7 +81,7 @@ export default function AdminCandidatesPage() {
     setSelected(c)
     setReferralMsg(null)
     if (companies.length === 0) {
-      const res = await fetch("/api/admin/companies")
+      const res = await apiFetch("/api/admin/companies")
       const data = await res.json()
       if (data.success) setCompanies(data.companies)
     }
@@ -95,7 +96,7 @@ export default function AdminCandidatesPage() {
     setReferring(true)
     setReferralMsg(null)
     try {
-      const res = await fetch("/api/admin/derive", {
+      const res = await apiFetch("/api/admin/derive", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ candidateId: selected.id, companyId }),

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import {
   Target, Building2, MapPin, Star, TrendingUp,
-  Briefcase, Sparkles, Loader2, Search
+  Briefcase, Sparkles, Loader2, Search, Brain
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -12,6 +12,7 @@ import { Progress } from "@/components/ui/progress"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
 import { useStore } from "@/store/useStore"
+import { apiFetch } from "@/lib/api"
 
 interface MatchData {
   id: string
@@ -46,6 +47,24 @@ export default function MatchesPage() {
   const [matches, setMatches] = useState<MatchData[]>([])
   const [search, setSearch] = useState("")
   const [activeTab, setActiveTab] = useState("all")
+  const [aiExplanation, setAiExplanation] = useState<string | null>(null)
+  const [aiLoadingId, setAiLoadingId] = useState<string | null>(null)
+  const [currentExplainedId, setCurrentExplainedId] = useState<string | null>(null)
+
+  async function explainMatch(matchId: string) {
+    setAiLoadingId(matchId)
+    setAiExplanation(null)
+    try {
+      const res = await apiFetch(`/api/ai/explain-match?matchId=${matchId}`)
+      const data = await res.json()
+      if (data.success) setAiExplanation(data.explanation)
+      else setAiExplanation("No se pudo generar la explicación. Intenta de nuevo.")
+    } catch {
+      setAiExplanation("Error de conexión al generar la explicación.")
+    } finally {
+      setAiLoadingId(null)
+    }
+  }
 
   useEffect(() => {
     if (!user?.id) return
@@ -144,6 +163,24 @@ export default function MatchesPage() {
                       <div className="text-3xl font-bold text-primary">{Math.round(m.overallMatch)}%</div>
                       <Badge variant="outline" className={`text-xs ${rec.color}`}>{rec.label}</Badge>
                     </div>
+                  </div>
+
+                  {/* Explicación IA */}
+                  <div className="mt-4 pt-4 border-t">
+                    {aiLoadingId === m.id ? (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Loader2 className="h-4 w-4 animate-spin" /> Generando explicación con IA...
+                      </div>
+                    ) : aiExplanation && aiLoadingId === null && currentExplainedId === m.id ? (
+                      <div className="p-3 rounded-lg bg-gradient-to-r from-fb-blue/5 to-fb-purple/5 border border-fb-blue/20 text-sm">
+                        <p className="font-medium mb-1 flex items-center gap-1"><Brain className="h-3.5 w-3.5" /> Por qué este match</p>
+                        <p className="text-muted-foreground">{aiExplanation}</p>
+                      </div>
+                    ) : (
+                      <Button variant="ghost" size="sm" onClick={() => { setCurrentExplainedId(m.id); explainMatch(m.id) }}>
+                        <Brain className="h-4 w-4 mr-1" /> Explicar con IA
+                      </Button>
+                    )}
                   </div>
 
                   {/* Score breakdown */}

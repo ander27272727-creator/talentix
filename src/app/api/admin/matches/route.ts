@@ -1,9 +1,12 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { requireRole } from '@/lib/auth'
 
-// GET /api/admin/matches — matches reales del motor + métricas
-export async function GET() {
+// GET /api/admin/matches — matches reales del motor + métricas (solo ADMIN)
+export async function GET(request: NextRequest) {
   try {
+    const auth = await requireRole(request, 'ADMIN')
+    if ('error' in auth) return auth.error
     const matches = await prisma.matchResult.findMany({
       orderBy: { createdAt: 'desc' },
       take: 20,

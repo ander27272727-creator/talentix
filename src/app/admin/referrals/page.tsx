@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { Zap, Search, Loader2, Inbox } from "lucide-react"
+import { apiFetch } from "@/lib/api"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"

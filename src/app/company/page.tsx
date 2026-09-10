@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { useStore } from "@/store/useStore"
+import { apiFetch } from "@/lib/api"
 
 interface DashboardData {
   company: { id: string; name: string; plan: string; planExpiresAt: string | null }

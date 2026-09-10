@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { Briefcase, Search, Loader2, Inbox } from "lucide-react"
+import { apiFetch } from "@/lib/api"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
@@ -40,7 +41,7 @@ export default function AdminVacanciesPage() {
   const [vacancies, setVacancies] = useState<VacancyRow[]>([])
 
   useEffect(() => {
-    fetch("/api/admin/vacancies")
+    apiFetch("/api/admin/vacancies")
       .then(r => r.json())
       .then(data => { if (data.success) setVacancies(data.vacancies) })
       .finally(() => setLoading(false))

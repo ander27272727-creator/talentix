@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { useStore } from "@/store/useStore"
+import { apiFetch } from "@/lib/api"
 
 interface AdminStats {
   stats: {
@@ -58,7 +59,7 @@ export default function AdminDashboard() {
   const [data, setData] = useState<AdminStats | null>(null)
 
   useEffect(() => {
-    fetch("/api/admin/stats")
+    apiFetch("/api/admin/stats")
       .then(r => r.json())
       .then(d => { if (d.success) setData(d) })
       .finally(() => setLoading(false))

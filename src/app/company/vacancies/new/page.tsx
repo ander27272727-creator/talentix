@@ -16,6 +16,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Progress } from "@/components/ui/progress"
 import { Separator } from "@/components/ui/separator"
 import { useStore } from "@/store/useStore"
+import { apiFetch } from "@/lib/api"
 
 const steps = [
   { id: 1, title: "Información Básica", icon: Briefcase },
@@ -137,7 +138,7 @@ export default function NewVacancyPage() {
     setPublishing(true)
     setPublishError(null)
     try {
-      const res = await fetch("/api/company/vacancies", {
+      const res = await apiFetch("/api/company/vacancies", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

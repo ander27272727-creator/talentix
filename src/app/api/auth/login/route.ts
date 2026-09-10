@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { getSupabaseAdmin } from '@/lib/supabase'
 
-// POST /api/auth/login
+// POST /api/auth/login — login real con Supabase Auth
+// Verifica credenciales contra Supabase Auth (service role) y devuelve el usuario de nuestra BD.
 export async function POST(request: NextRequest) {
   try {
     const { email, password } = await request.json()
@@ -13,9 +15,26 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Buscar usuario por email
+    const normalizedEmail = email.toLowerCase().trim()
+
+    // Verificar credenciales contra Supabase Auth
+    const supabase = getSupabaseAdmin()
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      email: normalizedEmail,
+      password,
+    })
+
+    if (authError || !authData.user) {
+      // No revelar si el usuario existe o no
+      return NextResponse.json(
+        { error: 'Credenciales inválidas' },
+        { status: 401 }
+      )
+    }
+
+    // Buscar usuario en nuestra BD
     const user = await prisma.user.findUnique({
-      where: { email: email.toLowerCase().trim() },
+      where: { email: normalizedEmail },
       include: {
         candidateProfile: {
           include: {
@@ -29,18 +48,8 @@ export async function POST(request: NextRequest) {
 
     if (!user) {
       return NextResponse.json(
-        { error: 'Usuario no encontrado' },
+        { error: 'Usuario no encontrado en la plataforma' },
         { status: 404 }
-      )
-    }
-
-    // Verificación simple de contraseña (en producción usar bcrypt)
-    // Para los usuarios demo, aceptamos cualquier contraseña
-    // Para usuarios nuevos, verificamos contra el hash
-    if (user.passwordHash && password.length < 3) {
-      return NextResponse.json(
-        { error: 'Contraseña inválida' },
-        { status: 401 }
       )
     }
 

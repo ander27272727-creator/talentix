@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { useStore } from "@/store/useStore"
+import { apiFetch } from "@/lib/api"
 
 interface VacancyRow {
   id: string
@@ -61,7 +62,7 @@ export default function CompanyVacanciesPage() {
   async function toggleStatus(v: VacancyRow) {
     const next = v.status === "ACTIVE" ? "PAUSED" : "ACTIVE"
     try {
-      const res = await fetch("/api/company/vacancies", {
+      const res = await apiFetch("/api/company/vacancies", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId: user!.id, vacancyId: v.id, status: next }),

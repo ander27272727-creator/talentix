@@ -1,9 +1,12 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { requireRole } from '@/lib/auth'
 
-// GET /api/admin/vacancies — todas las vacantes reales de la plataforma
-export async function GET() {
+// GET /api/admin/vacancies — todas las vacantes reales de la plataforma (solo ADMIN)
+export async function GET(request: NextRequest) {
   try {
+    const auth = await requireRole(request, 'ADMIN')
+    if ('error' in auth) return auth.error
     const vacancies = await prisma.vacancy.findMany({
       orderBy: { createdAt: 'desc' },
       include: {

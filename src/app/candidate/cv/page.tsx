@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { useStore } from "@/store/useStore"
+import { apiFetch } from "@/lib/api"
 
 interface CvData {
   fileName: string | null
@@ -75,7 +76,7 @@ export default function CandidateCVPage() {
         reader.readAsDataURL(file)
       })
 
-      const res = await fetch("/api/candidate/cv", {
+      const res = await apiFetch("/api/candidate/cv", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -104,7 +105,7 @@ export default function CandidateCVPage() {
     setError(null)
     setSuccess(null)
     try {
-      const res = await fetch("/api/candidate/cv", {
+      const res = await apiFetch("/api/candidate/cv", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId: user!.id }),
