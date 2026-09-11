@@ -27,6 +27,7 @@ const assessmentDB: Record<string, {
     dimension: string
     text: string
     scenario?: string
+    careerBranch?: string | null
     options: Array<{ text: string; value: number; originalValue?: number; dimension: string }>
     weights: Record<string, number>
   }>
@@ -388,6 +389,10 @@ const DIMENSION_EXPLANATIONS: Record<string, string> = {
   conflict_resolution: "Manejar desacuerdos de forma constructiva y profesional.",
   ethics: "Actuar con integridad incluso cuando nadie supervisa.",
   pressure_management: "Rendir con calidad cuando el tiempo o la exigencia aprietan.",
+  admin_knowledge: "Organización, planificación y control de procesos empresariales.",
+  tech_knowledge: "Soporte, sistemas, seguridad y diagnóstico técnico.",
+  health_knowledge: "Cuidado centrado en la persona y protocolos sanitarios.",
+  sales_knowledge: "Proceso comercial, negociación y fidelización de clientes.",
   architecture: "Diseñar sistemas escalables y mantenibles.",
   databases: "Consultas, modelado y optimización de datos.",
   algorithms: "Resolver problemas con eficiencia computacional.",
@@ -412,6 +417,11 @@ export default function AssessmentPage({ params }: { params: Promise<{ id: strin
   const [isCompleted, setIsCompleted] = useState(false)
   const [showResults, setShowResults] = useState(false)
   const [scores, setScores] = useState<Record<string, number>>({})
+  // ===== Flujo adaptativo del Track de Carrera =====
+  // allQuestions: banco completo (orientación + 4 ramas). questions: las que el candidato responde.
+  const [allQuestions, setAllQuestions] = useState<NonNullable<typeof assessment>['questions']>([])
+  const [revealedBranch, setRevealedBranch] = useState<string | null>(null)
+  const [phase, setPhase] = useState<'orientation' | 'branch'>('orientation')
 
   useEffect(() => {
     params.then(p => {
@@ -438,6 +448,7 @@ export default function AssessmentPage({ params }: { params: Promise<{ id: strin
                 dimension: q.dimension as string || 'general',
                 text: q.text as string,
                 scenario: q.scenario as string || undefined,
+                careerBranch: (q.careerBranch as string) || null,
                 options: opts.map((o, j: number) => ({
                   text: o.text,
                   value: j,
@@ -460,6 +471,15 @@ export default function AssessmentPage({ params }: { params: Promise<{ id: strin
               dimensions: [...new Set(a.questions?.map((q: Record<string, unknown>) => q.dimension as string) || [])] as string[],
               questions,
             })
+            // Si es el Track de Carrera: empezar solo con las preguntas de orientación
+            const isCareerTrack = (a as { careerTrack?: boolean }).careerTrack === true ||
+              (a as { id?: string }).id === 'career_track_main'
+            if (isCareerTrack) {
+              setAllQuestions(questions)
+              const orientation = questions.filter((q: { careerBranch?: string | null }) => q.careerBranch == null)
+              setAssessment((prev) => prev ? { ...prev, questions: orientation } : prev)
+              setPhase('orientation')
+            }
             setTimeLeft((a.timeLimitMinutes || 15) * 60)
             setLoading(false)
           } else {
@@ -533,6 +553,25 @@ export default function AssessmentPage({ params }: { params: Promise<{ id: strin
 
     if (currentQuestion < assessment.questions.length - 1) {
       setCurrentQuestion(currentQuestion + 1)
+    } else if (phase === 'orientation') {
+      // Fin de la fase de orientación → revelar la rama y cargar sus preguntas
+      const firstOrientationQ = allQuestions.find((q) => q.careerBranch == null)
+      const candidates = newAnswers.filter((a) => a.questionId === firstOrientationQ?.id)
+      const primaryAnswer = candidates[candidates.length - 1]
+      const BRANCHES = ['admin', 'tech', 'health', 'sales']
+      const branch = primaryAnswer ? (BRANCHES[primaryAnswer.value] ?? 'admin') : 'admin'
+      const branchQuestions = allQuestions.filter((q) => q.careerBranch === branch)
+      setRevealedBranch(branch)
+      setAssessment((prev) => prev
+        ? {
+            ...prev,
+            questions: branchQuestions.length > 0 ? branchQuestions : prev.questions,
+            dimensions: [...new Set(branchQuestions.map((q) => q.dimension))],
+          }
+        : prev)
+      setPhase('branch')
+      setCurrentQuestion(0)
+      setQuestionStartTime(Date.now())
     } else {
       calculateScores(newAnswers)
     }
@@ -626,6 +665,7 @@ export default function AssessmentPage({ params }: { params: Promise<{ id: strin
           score: overallScore,
           dimensionScores: finalScores,
           totalTimeSpent,
+          careerBranch: revealedBranch,
         }),
       }).then(r => r.json())
       .then(data => {
@@ -677,7 +717,7 @@ export default function AssessmentPage({ params }: { params: Promise<{ id: strin
       message: `Has obtenido ${overallScore}% en ${assessment.name}`,
       createdAt: new Date().toISOString(),
     })
-  }, [assessment, assessmentId, totalTimeSpent, addAssessmentResponse, addNotification])
+  }, [assessment, assessmentId, totalTimeSpent, revealedBranch, addAssessmentResponse, addNotification])
 
   if (!assessment) {
     if (loading) {
@@ -731,6 +771,15 @@ export default function AssessmentPage({ params }: { params: Promise<{ id: strin
             <h2 className="text-2xl font-bold mb-2">¡Evaluación Completada!</h2>
             <p className="text-muted-foreground mb-6">{assessment.name}</p>
 
+            {revealedBranch && (
+              <div className="mb-4 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-fb-blue/10 border border-fb-blue/20">
+                <Sparkles className="h-4 w-4 text-fb-blue" />
+                <span className="text-sm font-semibold text-fb-blue">
+                  Tu rama profesional: {{ admin: "Administración y Gestión", tech: "Informática y Sistemas", health: "Salud y Cuidado", sales: "Ventas y Comercio" }[revealedBranch] || revealedBranch}
+                </span>
+              </div>
+            )}
+
             <div className="text-6xl font-bold gradient-text mb-2">{overallScore}%</div>
             <p className="text-muted-foreground mb-6">Score General</p>
 
@@ -755,11 +804,17 @@ export default function AssessmentPage({ params }: { params: Promise<{ id: strin
                 <span className="font-medium text-sm">Insight de IA</span>
               </div>
               <p className="text-sm text-muted-foreground">
-                {overallScore >= 80
-                  ? "¡Excelente! Tus resultados son sobresalientes y fortalecerán significativamente tu perfil ante las empresas. Sigue así."
-                  : overallScore >= 60
-                  ? "Buenos resultados. Completar el resto de evaluaciones disponibles mejorará tu visibilidad ante reclutadores."
-                  : "Tus resultados muestran áreas de oportunidad. Completa las demás evaluaciones y mejora tu perfil para mejores matches."}
+                {revealedBranch
+                  ? (overallScore >= 80
+                    ? "¡Excelente! Dominas los fundamentos de tu rama. Con este resultado y tu perfil completo, el sistema te asignará evaluaciones y vacantes alineadas a tu orientación profesional."
+                    : overallScore >= 60
+                    ? "Buenos resultados. Tus respuestas ya orientan nuestro motor de matching hacia tu rama profesional. Completa las evaluaciones recomendadas para fortalecer tu perfil."
+                    : "Tu orientación profesional quedó registrada. Te recomendamos completar las evaluaciones prioritarias de tu rama para mejorar tus matches.")
+                  : (overallScore >= 80
+                    ? "¡Excelente! Tus resultados son sobresalientes y fortalecerán significativamente tu perfil ante las empresas. Sigue así."
+                    : overallScore >= 60
+                    ? "Buenos resultados. Completar el resto de evaluaciones disponibles mejorará tu visibilidad ante reclutadores."
+                    : "Tus resultados muestran áreas de oportunidad. Completa las demás evaluaciones y mejora tu perfil para mejores matches.")}
               </p>
             </div>
           </CardContent>

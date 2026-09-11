@@ -54,6 +54,7 @@ model CandidateProfile {
   cvUploadedAt DateTime?
   cvData       String? // base64 del archivo (max 2.5MB)
   skills       String[] // PostgreSQL array
+  careerBranch String?   // Rama profesional revelada por el Track de Carrera
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -211,6 +212,7 @@ model Assessment {
   timeLimitMinutes    Int
   targetRoles         String[]
   isActive            Boolean            @default(true)
+  careerTrack         Boolean            @default(false) // Evaluación de orientación de carrera
   createdBy           String?
   createdAt           DateTime           @default(now())
   updatedAt           DateTime           @updatedAt
@@ -253,6 +255,7 @@ model Question {
   text            String
   scenario        String?    // For scenario-based questions
   options         Json       // Array of options with weights
+  careerBranch    String?    // Rama de carrera si aplica (admin/tech/health/sales)
   reverseScored   Boolean    @default(false)
   order           Int
   createdAt       DateTime   @default(now())
@@ -286,6 +289,7 @@ model AssessmentResponse {
   dimensionScores Json?   // Scores per dimension
   isValid       Boolean   @default(true)
   fraudFlags    Json?     // Array of fraud indicators
+  careerBranch  String?   // Rama revelada si fue el Track de Carrera (admin/tech/health/sales)
 
   candidate  CandidateProfile @relation(fields: [candidateId], references: [id], onDelete: Cascade)
   assessment Assessment       @relation(fields: [assessmentId], references: [id], onDelete: Cascade)

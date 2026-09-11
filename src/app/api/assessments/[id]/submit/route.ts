@@ -11,7 +11,7 @@ export async function POST(
   try {
     const { id: assessmentId } = await params
     const body = await request.json()
-    const { userId, answers, score, dimensionScores, totalTimeSpent } = body
+    const { userId, answers, score, dimensionScores, totalTimeSpent, careerBranch } = body
 
     if (!userId || !answers || score === undefined) {
       return NextResponse.json({ error: 'userId, answers y score son requeridos' }, { status: 400 })
@@ -62,9 +62,23 @@ export async function POST(
         dimensionScores,
         totalTimeSpent,
         isValid,
+        careerBranch: careerBranch || null,
         fraudFlags: fraudReport as unknown as import('@prisma/client').Prisma.InputJsonValue,
       },
     })
+
+    // Si el Track de Carrera reveló una rama, guardarla en el perfil del candidato
+    // para que el motor de recomendación y matching la usen de inmediato
+    if (careerBranch && ['admin', 'tech', 'health', 'sales'].includes(careerBranch)) {
+      try {
+        await prisma.candidateProfile.update({
+          where: { id: profile.id },
+          data: { careerBranch },
+        })
+      } catch (branchError) {
+        console.error('Error guardando rama en perfil:', branchError)
+      }
+    }
 
     // Regenerar matches del candidato con los nuevos datos de evaluación
     // (solo si la evaluación es válida; las marcadas como fraude no alimentan el matching)
