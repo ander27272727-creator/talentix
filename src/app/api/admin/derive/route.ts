@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { notify } from '@/lib/notifications'
 import { requireRole } from '@/lib/auth'
 
 // POST /api/admin/derive — deriva un candidato a una empresa (solo ADMIN)
@@ -46,6 +47,7 @@ export async function POST(request: NextRequest) {
 
     // Crear referrals evitando duplicados
     let created = 0
+    const companyUser = await prisma.company.findUnique({ where: { id: companyId }, select: { userId: true, name: true } })
     for (const match of matches) {
       const existing = await prisma.referral.findFirst({
         where: { candidateId, companyId, vacancyId: match.vacancyId },
@@ -62,6 +64,21 @@ export async function POST(request: NextRequest) {
         })
         created++
       }
+    }
+
+    // Notificar a la empresa que recibió un candidato derivado
+    if (created > 0 && companyUser) {
+      const candidate = await prisma.candidateProfile.findUnique({
+        where: { id: candidateId },
+        select: { user: { select: { name: true } } },
+      })
+      await notify({
+        userId: companyUser.userId,
+        type: 'ASSESSMENT_ASSIGNED',
+        title: 'Nuevo candidato derivado',
+        body: `${candidate?.user.name || 'Un candidato'} fue derivado a ${created} vacante${created !== 1 ? 's' : ''} tuya por el equipo de Talentix. Revísalo en tu pipeline.`,
+        link: '/company/candidates',
+      })
     }
 
     return NextResponse.json({

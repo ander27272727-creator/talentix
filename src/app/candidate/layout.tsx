@@ -13,6 +13,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Input } from "@/components/ui/input"
+import { NotificationsBell } from "@/components/notifications-bell"
 import { useStore } from "@/store/useStore"
 
 const navigation = [
@@ -187,10 +188,7 @@ export default function CandidateLayout({
           </div>
 
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" className="relative">
-              <Bell className="h-5 w-5" />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
-            </Button>
+            <NotificationsBell />
 
             <div className="flex items-center gap-3">
               <Avatar>

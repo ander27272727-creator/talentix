@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import { calculateMatch, type CandidateProfile, type Vacancy, type CompanyProfile, type Experience, type Education } from './algorithm'
+import { notify } from '@/lib/notifications'
 
 /**
  * Motor de matching real: toma datos de Supabase (evaluaciones completadas,
@@ -109,7 +110,7 @@ export async function generateMatchesForCandidate(userId: string): Promise<numbe
   const vacancies = await prisma.vacancy.findMany({
     where: { status: 'ACTIVE' },
     include: {
-      company: true,
+      company: { include: { user: { select: { id: true } } } },
     },
   })
 
@@ -157,6 +158,11 @@ export async function generateMatchesForCandidate(userId: string): Promise<numbe
 
     const result = calculateMatch(algCandidate, algVacancy, algCompany)
 
+    const wasExisting = await prisma.matchResult.findUnique({
+      where: { candidateId_vacancyId: { candidateId: profile.id, vacancyId: v.id } },
+      select: { overallMatch: true },
+    })
+
     await prisma.matchResult.upsert({
       where: { candidateId_vacancyId: { candidateId: profile.id, vacancyId: v.id } },
       create: {
@@ -179,6 +185,30 @@ export async function generateMatchesForCandidate(userId: string): Promise<numbe
         recommendation: result.recommendation,
       },
     })
+
+    // Notificar match de alta compatibilidad (≥85%) a empresa y candidato (una sola vez por umbral)
+    const THRESHOLD = 85
+    const crossed = (!wasExisting || wasExisting.overallMatch < THRESHOLD) && result.overallMatch >= THRESHOLD
+    if (crossed) {
+      const pct = Math.round(result.overallMatch)
+      await Promise.all([
+        notify({
+          userId: v.company.userId,
+          type: 'MATCH_HIGH',
+          title: `Match de ${pct}% en ${v.title}`,
+          body: `${profile.user.name || 'Un candidato'} superó el ${THRESHOLD}% de compatibilidad con tu vacante. Revísalo antes que otros equipos.`,
+          link: '/company/candidates',
+        }),
+        notify({
+          userId: profile.userId,
+          type: 'MATCH_HIGH',
+          title: `¡${pct}% de compatibilidad con ${v.company.name}!`,
+          body: `Tu perfil encaja muy bien con el puesto de ${v.title}. Completa tus evaluaciones pendientes para destacar aún más.`,
+          link: '/candidate/matches',
+        }),
+      ])
+    }
+
     created++
   }
 

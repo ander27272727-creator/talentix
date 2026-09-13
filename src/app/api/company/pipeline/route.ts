@@ -26,6 +26,14 @@ export async function GET(request: NextRequest) {
       },
     })
 
+    // Teléfonos de los candidatos (para WhatsApp directo)
+    const candidateIds = Array.from(new Set(referrals.map((r) => r.candidateId)))
+    const profiles = await prisma.candidateProfile.findMany({
+      where: { id: { in: candidateIds } },
+      select: { id: true, phone: true },
+    })
+    const phoneMap = new Map(profiles.map((p) => [p.id, p.phone]))
+
     const STAGES = ['PENDING', 'VIEWED', 'CONTACTED', 'INTERVIEW', 'HIRED', 'REJECTED'] as const
     const STAGE_LABELS: Record<string, string> = {
       PENDING: 'Derivados',
@@ -55,6 +63,7 @@ export async function GET(request: NextRequest) {
           id: r.id,
           name: r.candidate.user.name,
           score: Math.round(r.matchScore),
+          phone: phoneMap.get(r.candidateId) || null,
         })),
       }
     })

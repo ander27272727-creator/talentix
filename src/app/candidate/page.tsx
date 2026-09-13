@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { useStore } from "@/store/useStore"
+import { AchievementsCard } from "@/components/achievements-card"
 
 interface MatchData {
   id: string
@@ -212,6 +213,9 @@ export default function CandidateDashboard() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Gamificación: recorrido del candidato */}
+        {user?.id && <AchievementsCard userId={user.id} />}
+
         {/* Top Matches */}
         <Card>
           <CardHeader>

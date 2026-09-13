@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react"
 import {
-  Users, Search, Eye, X, Loader2, Inbox, Brain, Target, Briefcase,
+  Users, Search, Eye, X, Loader2, Inbox, Brain, Target, Briefcase, Printer,
   GraduationCap, MapPin, Mail, Phone, FileText, Send, Award
 } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
@@ -188,6 +188,14 @@ export default function AdminCandidatesPage() {
                     </div>
                     <Button variant="ghost" size="icon" title="Ver perfil completo" onClick={() => openDetail(c)}>
                       <Eye className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      title="Reporte imprimible (PDF)"
+                      onClick={() => window.open(`/admin/candidate-report?candidateId=${c.id}`, "_blank")}
+                    >
+                      <Printer className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>

@@ -473,3 +473,38 @@ model AnalyticsEvent {
   @@index([eventType])
   @@index([createdAt])
 }
+
+// ==================== NOTIFICATIONS ====================
+
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  type      String // MATCH_HIGH, REFERRAL_VIEWED, ASSESSMENT_ASSIGNED, CONTRACT_EXPIRING, INTERVIEW_SCHEDULED
+  title     String
+  body      String
+  link      String?
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, readAt])
+  @@index([createdAt])
+}
+
+// ==================== INTERVIEWS ====================
+
+model Interview {
+  id          String   @id @default(cuid())
+  referralId  String   @unique
+  companyId   String
+  candidateId String
+  scheduledAt DateTime
+  durationMin Int      @default(45)
+  mode        String   @default("VIDEO") // VIDEO | PHONE | ONSITE
+  notes       String?
+  status      String   @default("SCHEDULED") // SCHEDULED | COMPLETED | CANCELLED
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([candidateId])
+  @@index([companyId])
+}
