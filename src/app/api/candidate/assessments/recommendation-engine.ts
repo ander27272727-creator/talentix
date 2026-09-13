@@ -223,12 +223,16 @@ export function computeRecommendedRamas(userId: string): Promise<RecommendationR
  * This can be customized based on platform catalog; for now returns a static mapping.
  */
 function computeExposedAssessments(revealedRamas: string[]): string[] {
-  // Evaluaciones del catálogo real (seed_evaluations.ts) relevantes por rama
+  // Evaluaciones del catálogo real (seed_evaluations.ts + seed-role-assessments.js) por rama.
+  // admin → lógica + juicio situacional (roles de gestión)
+  // tech  → lógica + OCEAN (resolución de problemas + trabajo en equipo)
+  // sales → evaluación comercial específica (ventas/call center) + OCEAN
+  // health→ evaluación de salud/cuidado específica + OCEAN (empatía, estrés)
   const ramaToAssessments: Record<string, string[]> = {
     admin: ['assess_cog_logic', 'assess_behav_sjt'],
-    tech: ['assess_cog_logic', 'assess_tech_dev'],
-    health: ['assess_psych_personality', 'assess_behav_sjt'],
-    sales: ['assess_psych_personality', 'assess_behav_sjt'],
+    tech: ['assess_cog_logic', 'assess_psych_personality'],
+    sales: ['assess_sales_callcenter', 'assess_psych_personality'],
+    health: ['assess_health_care', 'assess_psych_personality'],
   }
   const exposed = new Set<string>()
   for (const rama of revealedRamas) {

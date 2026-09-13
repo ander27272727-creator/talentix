@@ -394,7 +394,16 @@ export function calculateMatch(
   company: CompanyProfile,
   roleWeights?: Record<string, number>
 ): MatchResult {
-  const weights = roleWeights || roleAssessmentWeights[vacancy.category] || roleAssessmentWeights.default
+  // Normaliza la categoría ("Tecnología" → "tecnologia") para el lookup de pesos
+  const normalizedCategory = (vacancy.category || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+  const weights =
+    roleWeights ||
+    roleAssessmentWeights[vacancy.category] ||
+    roleAssessmentWeights[normalizedCategory] ||
+    roleAssessmentWeights.default
   
   // Company Fit Score
   const skillsMatch = calculateSkillsMatch(candidate, vacancy)

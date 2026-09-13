@@ -732,7 +732,92 @@ export const careerTrackAssessment = {
 // ==================== ASSESSMENT WEIGHTS BY ROLE ====================
 
 export const roleAssessmentWeights: Record<string, Record<string, number>> = {
-  // Executive roles
+  // ===== Categorías de vacantes reales del formulario de empresa =====
+  tecnologia: {
+    psychometric: 10,
+    cognitive: 15,
+    behavioral: 10,
+    technical: 35,
+    experience: 20,
+    skills: 10,
+  },
+  ventas: {
+    // Comercial: pesa comportamiento (resiliencia, orientación al cliente) y experiencia
+    psychometric: 20,
+    cognitive: 5,
+    behavioral: 30,
+    technical: 10,
+    experience: 25,
+    skills: 10,
+  },
+  marketing: {
+    psychometric: 15,
+    cognitive: 10,
+    behavioral: 25,
+    technical: 10,
+    experience: 25,
+    skills: 15,
+  },
+  diseno: {
+    psychometric: 10,
+    cognitive: 10,
+    behavioral: 15,
+    technical: 25,
+    experience: 25,
+    skills: 15,
+  },
+  finanzas: {
+    // Analítico: cognición y experiencia dominan
+    psychometric: 10,
+    cognitive: 25,
+    behavioral: 15,
+    technical: 15,
+    experience: 25,
+    skills: 10,
+  },
+  rrhh: {
+    // Trato con personas: comportamiento y psicometría
+    psychometric: 20,
+    cognitive: 10,
+    behavioral: 30,
+    technical: 5,
+    experience: 25,
+    skills: 10,
+  },
+  operaciones: {
+    psychometric: 10,
+    cognitive: 20,
+    behavioral: 20,
+    technical: 15,
+    experience: 25,
+    skills: 10,
+  },
+  producto: {
+    psychometric: 15,
+    cognitive: 20,
+    behavioral: 20,
+    technical: 10,
+    experience: 20,
+    skills: 15,
+  },
+  // ===== Alias en inglés (compatibilidad) =====
+  technology: {
+    psychometric: 10,
+    cognitive: 15,
+    behavioral: 10,
+    technical: 35,
+    experience: 20,
+    skills: 10,
+  },
+  sales: {
+    psychometric: 20,
+    cognitive: 5,
+    behavioral: 30,
+    technical: 10,
+    experience: 25,
+    skills: 10,
+  },
+  // ===== Roles ejecutivos =====
   director: {
     psychometric: 20,
     cognitive: 10,
@@ -749,7 +834,6 @@ export const roleAssessmentWeights: Record<string, Record<string, number>> = {
     experience: 25,
     skills: 10,
   },
-  // Technical roles
   developer: {
     psychometric: 10,
     cognitive: 15,
@@ -766,16 +850,7 @@ export const roleAssessmentWeights: Record<string, Record<string, number>> = {
     experience: 15,
     skills: 15,
   },
-  // Commercial roles
-  sales: {
-    psychometric: 20,
-    cognitive: 10,
-    behavioral: 30,
-    technical: 5,
-    experience: 25,
-    skills: 10,
-  },
-  // Default
+  // Default: equilibrado
   default: {
     psychometric: 15,
     cognitive: 15,

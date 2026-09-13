@@ -42,30 +42,6 @@ export default function LoginPage() {
     }
   }
 
-  const demoLogins = [
-    {
-      role: "Candidato",
-      email: "maria.garcia@email.com",
-      icon: Users,
-      color: "text-blue-600",
-      bg: "bg-blue-50",
-    },
-    {
-      role: "Empresa",
-      email: "rrhh@techcorp.com",
-      icon: Building2,
-      color: "text-purple-600",
-      bg: "bg-purple-50",
-    },
-    {
-      role: "Admin",
-      email: "admin@talentix.com",
-      icon: Shield,
-      color: "text-emerald-600",
-      bg: "bg-emerald-50",
-    },
-  ]
-
   return (
     <div className="min-h-screen flex">
       {/* Left side - Form */}
@@ -140,30 +116,6 @@ export default function LoginPage() {
               </Link>
             </p>
           </div>
-
-          <Separator className="my-8" />
-
-          {/* Atajos visuales (solo rellenan el email) */}
-          <div>
-            <p className="text-sm text-muted-foreground text-center mb-4">
-              ¿Eres candidato, empresa o administrador?
-            </p>
-            <div className="grid grid-cols-3 gap-3">
-              {demoLogins.map((demo) => (
-                <button
-                  key={demo.role}
-                  type="button"
-                  onClick={() => setEmail("")}
-                  className="flex flex-col items-center gap-2 p-3 rounded-xl border hover:bg-muted transition-colors"
-                >
-                  <div className={`w-10 h-10 rounded-lg ${demo.bg} flex items-center justify-center`}>
-                    <demo.icon className={`h-5 w-5 ${demo.color}`} />
-                  </div>
-                  <span className="text-xs font-medium">{demo.role}</span>
-                </button>
-              ))}
-            </div>
-          </div>
         </div>
       </div>
 
@@ -201,19 +153,6 @@ export default function LoginPage() {
             </div>
           </div>
         </div>
-      </div>
-    </div>
-  )
-}
-
-function Separator({ className }: { className?: string }) {
-  return (
-    <div className={`relative ${className}`}>
-      <div className="absolute inset-0 flex items-center">
-        <div className="w-full border-t border-border" />
-      </div>
-      <div className="relative flex justify-center text-xs uppercase">
-        <span className="bg-background px-2 text-muted-foreground">o</span>
       </div>
     </div>
   )

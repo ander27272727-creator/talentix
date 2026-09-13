@@ -213,6 +213,7 @@ model Assessment {
   targetRoles         String[]
   isActive            Boolean            @default(true)
   careerTrack         Boolean            @default(false) // Evaluación de orientación de carrera
+  careerBranch        String?            // Rama del puesto para evaluaciones específicas (sales/health/admin/tech)
   createdBy           String?
   createdAt           DateTime           @default(now())
   updatedAt           DateTime           @updatedAt

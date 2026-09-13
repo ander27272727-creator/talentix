@@ -13,9 +13,11 @@ import { useStore } from "@/store/useStore"
 
 function RegisterContent() {
   const searchParams = useSearchParams()
-  const initialRole = searchParams.get("role") === "company" ? "COMPANY" : "CANDIDATE"
-  
-  const [step, setStep] = useState(1)
+  const cameAsCompany = searchParams.get("role") === "company"
+  const initialRole = cameAsCompany ? "COMPANY" : "CANDIDATE"
+
+  // Si llegó desde "Solicita Demo" (role=company), va directo al formulario de empresa
+  const [step, setStep] = useState(cameAsCompany ? 2 : 1)
   const [role, setRole] = useState<"CANDIDATE" | "COMPANY">(initialRole as "CANDIDATE" | "COMPANY")
   const [formData, setFormData] = useState({
     name: "",
