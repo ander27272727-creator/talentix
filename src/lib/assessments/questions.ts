@@ -750,6 +750,78 @@ export const roleAssessmentWeights: Record<string, Record<string, number>> = {
     experience: 25,
     skills: 10,
   },
+  "atencion al cliente": {
+    // Servicio: conducta y estabilidad emocional pesan más que técnica
+    psychometric: 20,
+    cognitive: 10,
+    behavioral: 30,
+    technical: 5,
+    experience: 25,
+    skills: 10,
+  },
+  cobranzas: {
+    // Negociación bajo presión: conducta + cognición
+    psychometric: 15,
+    cognitive: 15,
+    behavioral: 30,
+    technical: 5,
+    experience: 25,
+    skills: 10,
+  },
+  "vendedor en tienda": {
+    // Piso de venta: conducta y experiencia
+    psychometric: 15,
+    cognitive: 5,
+    behavioral: 30,
+    technical: 10,
+    experience: 30,
+    skills: 10,
+  },
+  "conduccion y logistica": {
+    // Conducción: norma y comportamiento, poca teoría
+    psychometric: 15,
+    cognitive: 10,
+    behavioral: 30,
+    technical: 10,
+    experience: 30,
+    skills: 5,
+  },
+  "redaccion y contenido": {
+    // Contenido: técnica de escritura y cognición
+    psychometric: 10,
+    cognitive: 20,
+    behavioral: 15,
+    technical: 30,
+    experience: 15,
+    skills: 10,
+  },
+  seguridad: {
+    // Vigilancia: conducta, protocolo y confiabilidad
+    psychometric: 15,
+    cognitive: 10,
+    behavioral: 35,
+    technical: 5,
+    experience: 30,
+    skills: 5,
+  },
+  "salud y cuidado": {
+    // Salud: protocolo técnico + empatía
+    psychometric: 20,
+    cognitive: 10,
+    behavioral: 25,
+    technical: 20,
+    experience: 20,
+    skills: 5,
+  },
+  administracion: {
+    // Gestión: cognición + experiencia
+    psychometric: 10,
+    cognitive: 20,
+    behavioral: 20,
+    technical: 10,
+    experience: 30,
+    skills: 10,
+  },
   marketing: {
     psychometric: 15,
     cognitive: 10,

@@ -237,7 +237,7 @@ export default function NewVacancyPage() {
             <div className="space-y-2">
               <Label>Categoría *</Label>
               <div className="flex flex-wrap gap-2">
-                {["Tecnología", "Ventas", "Marketing", "Diseño", "Finanzas", "RRHH", "Operaciones", "Producto"].map((cat) => (
+                {["Tecnología", "Ventas", "Atención al Cliente", "Cobranzas", "Vendedor en Tienda", "Conducción y Logística", "Redacción y Contenido", "Seguridad", "Salud y Cuidado", "Administración", "Marketing", "Diseño", "Finanzas", "RRHH", "Operaciones", "Producto"].map((cat) => (
                   <Button
                     key={cat}
                     variant={formData.category === cat ? "fb" : "outline"}
