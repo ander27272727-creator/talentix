@@ -24,13 +24,58 @@ export async function GET(request: NextRequest) {
 
     const entries = await computeRecommendedRamas(userId)
 
+    // REGLA DE NEGOCIO: un candidato solo ve las evaluaciones relevantes para su rama.
+    // - Track de Carrera: siempre visible hasta completarlo
+    // - Genéricas (sin careerBranch): lógica, OCEAN, SJT — aplican a todos
+    // - Específicas de área: SOLO las de la rama confirmada/detectada
+    const BRANCH_MAP: Record<string, string> = {
+      admin: 'admin',
+      tech: 'tech',
+      sales: 'sales',
+      health: 'health',
+      collections: 'collections',
+      customer_service: 'customer_service',
+      retail_sales: 'retail_sales',
+      driver: 'driver',
+      writing: 'writing',
+      security: 'security',
+    }
+    const primaryRama = entries.revealedRamas[0]
+    const primaryBranchKey = primaryRama ? BRANCH_MAP[primaryRama] : undefined
+    // Si ya completó evaluaciones específicas de otra rama, esas se conservan (historial)
+    const doneAssessmentIds = new Set(
+      (
+        await prisma.assessmentResponse.findMany({
+          where: { candidateId: entries.profileId, completedAt: { not: null } },
+          select: { assessmentId: true },
+        })
+      ).map((r) => r.assessmentId)
+    )
+
     const assessment = await prisma.assessment.findMany({
-      where: { isActive: true },
+      where: {
+        isActive: true,
+        OR: [
+          { careerTrack: true },
+          { careerBranch: null },
+          ...(primaryBranchKey ? [{ careerBranch: primaryBranchKey }] : []),
+        ],
+      },
       include: {
         questions: { select: { id: true } },
       },
       orderBy: { category: 'asc' },
     })
+
+    // Añadir al catálogo las evaluaciones ya completadas de otras ramas (historial,
+    // aparecen en la sección Revisión aunque no sean de la rama actual)
+    const missingDone = doneAssessmentIds.size > 0
+      ? await prisma.assessment.findMany({
+          where: { isActive: true, id: { in: Array.from(doneAssessmentIds) }, NOT: { id: { in: assessment.map((a) => a.id) } } },
+          include: { questions: { select: { id: true } } },
+        })
+      : []
+    const allCatalog = [...assessment, ...missingDone]
 
     const responses = await prisma.assessmentResponse.findMany({
       where: { candidateId: entries.profileId },
@@ -50,9 +95,6 @@ export async function GET(request: NextRequest) {
     // careerTrackAssessment (el assessment con `careerTrack: true`) siempre va en
     // prioritarias hasta que quede completado; básicamente determina las ramas a explorar.
     const trackAssessmentId = entries.careerTrackId ?? null
-
-    // Todas las evaluaciones de cartera (otras que existen en la plataforma)
-    const allCatalog = assessment
 
     // Estados revelados/pendientes
     const revealed = entries.revealedRamas ?? []

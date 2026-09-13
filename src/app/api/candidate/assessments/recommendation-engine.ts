@@ -152,7 +152,7 @@ export function computeRecommendedRamas(userId: string): Promise<RecommendationR
           mapped.push('driver')
         if (combined.includes('redact') || combined.includes('copywrit') || combined.includes('contenido') || combined.includes('periodis') || combined.includes('community') || combined.includes('blog') || combined.includes('seo'))
           mapped.push('writing')
-        if (combined.includes('vigilad') || combined.includes('guardia') || combined.includes('seguridad') && !combined.includes('inform') || combined.includes('portero') || combined.includes('conserje'))
+        if (combined.includes('vigilad') || combined.includes('guardia') || (combined.includes('seguridad') && !combined.includes('inform')) || combined.includes('portero') || combined.includes('conserje'))
           mapped.push('security')
         return mapped
       })
@@ -192,6 +192,18 @@ export function computeRecommendedRamas(userId: string): Promise<RecommendationR
         ...positionHints,
         ...skillHints,
       ]))
+
+      // REGLA DE NEGOCIO: si el Track de Carrera ya confirmó una rama, esa gana.
+      // No mezclamos pistas sueltas de skills/experiencia que dispersan al candidato
+      // entre áreas distintas (ventas + salud + cobranzas a la vez).
+      if (profile.careerBranch) {
+        revealedRamas = [profile.careerBranch]
+      } else {
+        // Sin rama confirmada, solo revelamos ramas si el perfil tiene señal real.
+        // Perfiles casi vacíos (17-20%) no deben recibir baterías específicas de área.
+        const hasSignal = educationCount > 0 || experienceCount > 0 || skillsCount >= 3
+        revealedRamas = hasSignal ? revealedRamas : []
+      }
     }
 
     // Compute exposed assessments (evaluations that are recommended based on revealed ramas)
@@ -246,14 +258,12 @@ export function computeRecommendedRamas(userId: string): Promise<RecommendationR
 
 /**
  * Determine which assessments are exposed (recommended) given a list of ramas.
- * This can be customized based on platform catalog; for now returns a static mapping.
+ * SOLO se expone la rama PRIMARIA (la confirmada por el Track o la principal detectada).
+ * Las demás áreas detectadas quedan como complementarias, no prioritarias.
  */
 function computeExposedAssessments(revealedRamas: string[]): string[] {
-  // Evaluaciones del catálogo real (seed_evaluations.ts + seed-role-assessments.js) por rama.
-  // admin → lógica + juicio situacional (roles de gestión)
-  // tech  → lógica + OCEAN (resolución de problemas + trabajo en equipo)
-  // sales → evaluación comercial específica (ventas/call center) + OCEAN
-  // health→ evaluación de salud/cuidado específica + OCEAN (empatía, estrés)
+  const primary = revealedRamas[0]
+  if (!primary) return []
   const ramaToAssessments: Record<string, string[]> = {
     admin: ['assess_cog_logic', 'assess_behav_sjt'],
     tech: ['assess_cog_logic', 'assess_psych_personality'],
@@ -266,12 +276,7 @@ function computeExposedAssessments(revealedRamas: string[]): string[] {
     writing: ['assess_writing', 'assess_cog_logic'],
     security: ['assess_security', 'assess_behav_sjt'],
   }
-  const exposed = new Set<string>()
-  for (const rama of revealedRamas) {
-    const asses = ramaToAssessments[rama]
-    if (asses) for (const a of asses) exposed.add(a)
-  }
-  return Array.from(exposed)
+  return ramaToAssessments[primary] ?? []
 }
 
 /**

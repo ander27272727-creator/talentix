@@ -32,6 +32,8 @@ interface AssessmentData {
   completed: boolean
   score: number | null
   questionCount: number
+  careerTrack?: boolean
+  group?: string
 }
 
 interface ProfileData {
@@ -91,7 +93,15 @@ export default function CandidateDashboard() {
   // Evaluaciones completadas
   const completedAssessments = assessments.filter(a => a.completed).length
   const totalAssessments = assessments.length
-  const pendingAssessments = assessments.filter(a => !a.completed).slice(0, 3)
+  // El dashboard muestra SOLO el siguiente paso lógico: el Track de Carrera si está pendiente,
+  // o las prioritarias de la rama detectada. Nunca una mezcla de áreas distintas.
+  const pendingAssessments = (() => {
+    const pending = assessments.filter(a => !a.completed)
+    const track = pending.find(a => a.careerTrack)
+    if (track) return [track]
+    const priority = pending.filter(a => a.group && a.group !== "Complementaria")
+    return (priority.length > 0 ? priority : pending).slice(0, 3)
+  })()
 
   // Stats
   const avgMatch = matches.length > 0
